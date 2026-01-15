@@ -26,7 +26,16 @@ export const copyToClipboard = async (text) => {
  * @returns {string}
  */
 export const formatDate = (date, locale = 'pt-BR') => {
-  const dateObj = date instanceof Date ? date : new Date(date)
+  let dateObj
+  if (date instanceof Date) {
+    dateObj = date
+  } else if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    // Para strings no formato YYYY-MM-DD, adiciona T12:00 para evitar problemas de timezone
+    const [year, month, day] = date.split('-')
+    dateObj = new Date(year, month - 1, day)
+  } else {
+    dateObj = new Date(date)
+  }
   return dateObj.toLocaleDateString(locale, {
     day: '2-digit',
     month: 'long',

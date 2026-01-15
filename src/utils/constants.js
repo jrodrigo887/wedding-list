@@ -6,7 +6,7 @@ export const APP_CONFIG = {
   APP_NAME: 'Lista de Casamento',
   BRIDE_NAME: 'Rodrigo',
   GROOM_NAME: 'Elisa',
-  WEDDING_DATE: '2025-04-12',
+  WEDDING_DATE: '2026-04-12',
   PIX_KEY: '83999480965',
   API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
   API_TIMEOUT: 10000,
