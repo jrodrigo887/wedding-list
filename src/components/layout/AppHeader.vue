@@ -1,8 +1,11 @@
 <template>
   <header class="app-header">
+    <div class="app-header__bg">
+      <img :src="bgImage" alt="" class="app-header__bg-img" />
+    </div>
+    <div class="app-header__overlay"></div>
     <div class="app-header__container">
       <div class="app-header__content">
-        <div class="app-header__icon">💍</div>
         <div class="app-header__text">
           <h1 class="app-header__title">{{ title }}</h1>
           <p class="app-header__subtitle">{{ subtitle }}</p>
@@ -21,6 +24,7 @@
 import { computed } from 'vue'
 import { APP_CONFIG } from '@/utils/constants'
 import { formatDate } from '@/utils/helpers'
+import bgImage from '@/assets/IMG_8009.JPEG'
 
 // ========================================
 // Props
@@ -48,16 +52,38 @@ const formattedDate = computed(() => formatDate(APP_CONFIG.WEDDING_DATE))
   box-shadow: 0 2px 8px rgba(61, 43, 31, 0.15);
   position: relative;
   overflow: hidden;
+  min-height: 180px;
 }
 
-.app-header::before {
-  content: '';
+.app-header__bg {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at top right, rgba(212, 165, 116, 0.15) 0%, transparent 70%);
+  overflow: hidden;
+}
+
+.app-header__bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  filter: blur(2px);
+  opacity: 0.7;
+}
+
+.app-header__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(139, 58, 58, 0.7) 0%,
+    rgba(139, 58, 58, 0.85) 100%
+  );
   pointer-events: none;
 }
 
@@ -78,11 +104,6 @@ const formattedDate = computed(() => formatDate(APP_CONFIG.WEDDING_DATE))
   align-items: center;
   gap: 1rem;
   text-align: center;
-}
-
-.app-header__icon {
-  font-size: 3rem;
-  line-height: 1;
 }
 
 .app-header__text {
@@ -138,9 +159,6 @@ const formattedDate = computed(() => formatDate(APP_CONFIG.WEDDING_DATE))
     font-size: 0.875rem;
   }
 
-  .app-header__icon {
-    font-size: 2.5rem;
-  }
 }
 
 @media (max-width: 640px) {
