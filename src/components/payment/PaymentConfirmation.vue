@@ -35,7 +35,7 @@ import { useNotification } from '@/composables/useNotification'
 import { infinityPayService } from '@/services/infinitypay.service'
 
 const giftStore = useGiftStore()
-const { success, error: showError } = useNotification()
+const { success } = useNotification()
 
 const showConfirmation = ref(false)
 const status = ref('pending') // 'success' | 'pending' | 'error'
@@ -89,29 +89,29 @@ const checkPaymentStatus = async () => {
   status.value = 'pending'
 
   try {
-    // Aguarda um pouco para o webhook processar
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Confirma a reserva no Google Sheets
+    // O pagamento foi feito no InfinityPay, agora registramos a reserva
+    if (pendingTransaction.value) {
+      await infinityPayService.confirmReservation({
+        giftId: pendingTransaction.value.giftId,
+        orderNsu: pendingTransaction.value.orderNsu,
+        customer: pendingTransaction.value.customer,
+      })
+    }
 
     // Recarrega os presentes para ver se foi reservado
     await giftStore.loadGifts()
 
-    // Verifica se o presente foi reservado
-    const gift = giftStore.gifts.find(g => String(g.id) === String(pendingTransaction.value?.giftId))
-
-    if (gift?.status === 'reserved') {
-      status.value = 'success'
-      infinityPayService.clearPendingTransaction()
-      success('Pagamento confirmado! Presente reservado com sucesso.')
-    } else {
-      // Pode ser que o webhook ainda não processou
-      // Considera sucesso pois o pagamento foi feito no Infinity Pay
-      status.value = 'success'
-      infinityPayService.clearPendingTransaction()
-    }
+    status.value = 'success'
+    infinityPayService.clearPendingTransaction()
+    success('Pagamento confirmado! Presente reservado com sucesso.')
   } catch (err) {
-    console.error('Erro ao verificar pagamento:', err)
-    status.value = 'error'
-    showError('Erro ao verificar pagamento')
+    console.error('Erro ao confirmar reserva:', err)
+    // Mesmo com erro na reserva, o pagamento foi feito
+    // Mostra sucesso mas loga o erro
+    status.value = 'success'
+    infinityPayService.clearPendingTransaction()
+    console.warn('Pagamento realizado mas houve erro ao registrar reserva:', err)
   }
 }
 
