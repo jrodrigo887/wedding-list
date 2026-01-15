@@ -1,17 +1,17 @@
 // ========================================
 // INFINITY PAY SERVICE
-// Integração com API de Checkout
+// Integração com API de Checkout via Proxy (Google Apps Script)
 // ========================================
-
-const INFINITYPAY_API_URL = 'https://api.infinitepay.io/invoices/public/checkout/links'
 
 /**
  * Configuração do Infinity Pay
  */
 const getConfig = () => ({
   handle: import.meta.env.VITE_INFINITYPAY_HANDLE || '',
-  redirectUrl: import.meta.env.VITE_INFINITYPAY_REDIRECT_URL || `${window.location.origin}/pagamento-confirmado`,
+  redirectUrl: import.meta.env.VITE_INFINITYPAY_REDIRECT_URL || `${window.location.origin}?pagamento=confirmado`,
   webhookUrl: import.meta.env.VITE_INFINITYPAY_WEBHOOK_URL || '',
+  // URL do Google Apps Script para proxy
+  proxyUrl: import.meta.env.VITE_GOOGLE_SCRIPT_URL || '',
 })
 
 /**
@@ -24,11 +24,12 @@ export const infinityPayService = {
    */
   isConfigured() {
     const config = getConfig()
-    return !!config.handle
+    return !!config.handle && !!config.proxyUrl
   },
 
   /**
    * Gera um link de pagamento para um presente
+   * Usa o Google Apps Script como proxy para evitar CORS
    * @param {Object} gift - Dados do presente
    * @param {Object} customer - Dados do cliente
    * @returns {Promise<Object>} - URL do checkout e dados da transação
@@ -40,8 +41,15 @@ export const infinityPayService = {
       throw new Error('Infinity Pay não configurado. Configure VITE_INFINITYPAY_HANDLE no .env')
     }
 
-    // Prepara o payload conforme documentação da API
+    if (!config.proxyUrl) {
+      throw new Error('URL do Google Apps Script não configurada. Configure VITE_GOOGLE_SCRIPT_URL no .env')
+    }
+
+    const orderNsu = `gift_${gift.id}_${Date.now()}`
+
+    // Prepara o payload para o proxy (Google Apps Script)
     const payload = {
+      action: 'createCheckoutLink',
       handle: config.handle,
       items: [
         {
@@ -50,8 +58,8 @@ export const infinityPayService = {
           description: `Presente de Casamento: ${gift.name}`,
         },
       ],
-      order_nsu: `gift_${gift.id}_${Date.now()}`, // ID único para rastreamento
-      redirect_url: `${config.redirectUrl}?gift_id=${gift.id}`,
+      order_nsu: orderNsu,
+      redirect_url: `${config.redirectUrl}&gift_id=${gift.id}`,
       customer: {
         name: customer.name,
         email: customer.email,
@@ -64,29 +72,25 @@ export const infinityPayService = {
       payload.webhook_url = config.webhookUrl
     }
 
-    console.log('[InfinityPay] Criando link de pagamento:', payload)
+    console.log('[InfinityPay] Criando link de pagamento via proxy:', payload)
 
     try {
-      const response = await fetch(INFINITYPAY_API_URL, {
+      // Envia para o Google Apps Script (proxy)
+      const response = await fetch(config.proxyUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('[InfinityPay] Erro na API:', errorData)
-        throw new Error(errorData.message || `Erro ao criar link de pagamento: ${response.status}`)
+      const data = await response.json()
+      console.log('[InfinityPay] Resposta do proxy:', data)
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao criar link de pagamento')
       }
 
-      const data = await response.json()
-      console.log('[InfinityPay] Link criado com sucesso:', data)
-
       return {
-        checkoutUrl: data.url || data.checkout_url,
-        orderNsu: payload.order_nsu,
+        checkoutUrl: data.checkoutUrl || data.url,
+        orderNsu: orderNsu,
         ...data,
       }
     } catch (error) {
