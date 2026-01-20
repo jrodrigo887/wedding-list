@@ -1,29 +1,43 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="isOpen" class="modal-overlay" @click="close">
-        <div class="modal" @click.stop>
-          <button class="modal__close" @click="close">&times;</button>
+      <div v-if="isOpen" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click="close">
+        <div class="relative w-full max-w-md bg-white border-2 border-amber-300 rounded-2xl shadow-2xl overflow-hidden" @click.stop>
+          <!-- Close button -->
+          <button
+            class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-amber-50 hover:bg-amber-100 rounded-full text-gray-500 hover:text-gray-700 transition-colors z-10"
+            @click="close"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
 
-          <div class="modal__header">
-            <h2 class="modal__title">Contribua via PIX</h2>
-            <p class="modal__subtitle">Qualquer valor é bem-vindo!</p>
+          <!-- Header -->
+          <div class="px-6 py-5 text-center bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+            <h2 class="text-xl font-serif font-semibold mb-1">Contribua via PIX</h2>
+            <p class="text-amber-100 text-sm">Qualquer valor é bem-vindo!</p>
           </div>
 
-          <div class="modal__content">
+          <!-- Content -->
+          <div class="p-6 space-y-5">
             <!-- QR Code -->
-            <div class="pix__qrcode">
-              <img :src="qrcodePix" alt="QR Code PIX" />
+            <div class="flex justify-center">
+              <img
+                :src="qrcodePix"
+                alt="QR Code PIX"
+                class="w-44 h-44 rounded-xl border-2 border-amber-200"
+              />
             </div>
 
             <!-- Chave PIX -->
-            <div class="pix__key">
-              <label class="pix__label">Chave PIX</label>
-              <div class="pix__key-wrapper">
+            <div class="space-y-2">
+              <label class="block font-semibold text-gray-700 text-sm">Chave PIX</label>
+              <div class="flex gap-2">
                 <input
                   :value="pixKey"
                   readonly
-                  class="pix__key-input"
+                  class="flex-1 px-4 py-3 text-sm font-mono font-semibold text-gray-700 bg-amber-50 border-2 border-amber-200 rounded-xl text-center focus:outline-none focus:border-amber-400"
                   @focus="$event.target.select()"
                 />
                 <BaseButton
@@ -37,9 +51,9 @@
             </div>
 
             <!-- Beneficiário -->
-            <div class="pix__beneficiary">
-              <span class="pix__beneficiary-label">Beneficiário:</span>
-              <span class="pix__beneficiary-name">{{ beneficiaryName }}</span>
+            <div class="flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 rounded-xl text-sm">
+              <span class="text-gray-500">Beneficiário:</span>
+              <span class="font-semibold text-gray-700">{{ beneficiaryName }}</span>
             </div>
           </div>
         </div>
@@ -57,7 +71,7 @@ import { APP_CONFIG, MESSAGES } from '@/utils/constants'
 import qrcodePix from '@/assets/qrcode-pix.png'
 
 // Props
-const props = defineProps({
+defineProps({
   isOpen: {
     type: Boolean,
     default: false,
@@ -99,157 +113,14 @@ const handleCopyPix = async () => {
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  position: relative;
-  width: 100%;
-  max-width: 400px;
-  background: white;
-  border: 3px solid #D4A574;
-  border-radius: 1.5rem;
-  box-shadow: 0 20px 60px rgba(139, 58, 58, 0.3);
-  overflow: hidden;
-}
-
-.modal__close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #F5E6D3;
-  border: none;
-  border-radius: 50%;
-  font-size: 1.5rem;
-  color: #8B7355;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  z-index: 1;
-}
-
-.modal__close:hover {
-  background: #E8DCC8;
-  color: #3d2b1f;
-}
-
-.modal__header {
-  padding: 1.5rem 1.5rem 1rem;
-  text-align: center;
-  background: linear-gradient(135deg, #8B3A3A 0%, #6B2929 100%);
-  color: #FFF9F0;
-}
-
-.modal__title {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.modal__subtitle {
-  margin: 0;
-  font-size: 0.875rem;
-  opacity: 0.9;
-}
-
-.modal__content {
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.pix__qrcode {
-  display: flex;
-  justify-content: center;
-}
-
-.pix__qrcode img {
-  width: 180px;
-  height: 180px;
-  border-radius: 0.75rem;
-  border: 2px solid #E8DCC8;
-}
-
-.pix__key {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.pix__label {
-  font-weight: 600;
-  color: #3d2b1f;
-  font-size: 0.875rem;
-}
-
-.pix__key-wrapper {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.pix__key-input {
-  flex: 1;
-  padding: 0.625rem 0.75rem;
-  font-size: 0.875rem;
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-  color: #3d2b1f;
-  background: #FFF9F0;
-  border: 2px solid #E8DCC8;
-  border-radius: 0.5rem;
-  text-align: center;
-}
-
-.pix__key-input:focus {
-  outline: none;
-  border-color: #8B3A3A;
-}
-
-.pix__beneficiary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #FFF9F0;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.pix__beneficiary-label {
-  color: #8B7355;
-}
-
-.pix__beneficiary-name {
-  color: #3d2b1f;
-  font-weight: 600;
-}
-
 /* Animations */
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.3s ease;
 }
 
-.modal-enter-active .modal,
-.modal-leave-active .modal {
+.modal-enter-active > div,
+.modal-leave-active > div {
   transition: transform 0.3s ease;
 }
 
@@ -258,25 +129,8 @@ const handleCopyPix = async () => {
   opacity: 0;
 }
 
-.modal-enter-from .modal,
-.modal-leave-to .modal {
+.modal-enter-from > div,
+.modal-leave-to > div {
   transform: scale(0.9);
-}
-
-/* Mobile */
-@media (max-width: 640px) {
-  .modal {
-    max-width: 100%;
-    margin: 0 1rem;
-  }
-
-  .pix__qrcode img {
-    width: 150px;
-    height: 150px;
-  }
-
-  .pix__key-wrapper {
-    flex-direction: column;
-  }
 }
 </style>

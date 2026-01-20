@@ -1,228 +1,83 @@
 <template>
-  <div class="home-page">
-    <AppHeader />
-
-    <main class="main-content">
-      <div class="container">
-        <!-- Header com stats inline e botões de pagamento -->
-        <section class="top-bar">
-          <div class="stats-inline">
-            <span class="stats-inline__item">
-              <strong>{{ currentStats.total }}</strong> presentes
-            </span>
-            <span class="stats-inline__separator">|</span>
-            <span class="stats-inline__item stats-inline__item--available">
-              <strong>{{ currentStats.available }}</strong> disponiveis
-            </span>
-            <span class="stats-inline__separator">|</span>
-            <span class="stats-inline__item stats-inline__item--reserved">
-              <strong>{{ currentStats.reserved }}</strong> reservados
-            </span>
-          </div>
-          <div class="payment-buttons">
-            <router-link to="/confirmar-presenca" class="rsvp-button">
-              ✉️ Confirmar Presenca
-            </router-link>
-            <button class="pix-button" @click="showPixModal = true">
-              💰 Fazer PIX
-            </button>
-            <button
-              v-if="linkNaBioUrl"
-              class="link-na-bio-button"
-              @click="openLinkNaBio"
-            >
-              💳 Cartao
-            </button>
-          </div>
-        </section>
-
-        <!-- Type Filter (Tabs) -->
-        <section class="type-filter-section">
-          <TypeFilter v-model="selectedType" :types="typeOptions" />
-        </section>
-
-        <!-- Category Filter -->
-        <section v-if="categoryOptions.length > 2" class="filter-section">
-          <CategoryFilter v-model="selectedCategory" :categories="categoryOptions" />
-        </section>
-
-        <!-- Search -->
-        <div class="search-box" :class="{ 'search-box--expanded': searchExpanded }">
-          <input
-            v-if="searchExpanded"
-            ref="searchInput"
-            v-model="searchQuery"
-            type="text"
-            class="search-input"
-            placeholder="Buscar presente..."
-            @blur="handleSearchBlur"
-            @keydown.escape="closeSearch"
-          />
-          <button
-            class="search-toggle"
-            @click="toggleSearch"
-            :aria-label="searchExpanded ? 'Fechar busca' : 'Abrir busca'"
-          >
-            <span v-if="!searchExpanded || !searchQuery">🔍</span>
-            <span v-else @click.stop="clearSearch">&times;</span>
-          </button>
+  <div class="page-container">
+    <!-- Elegant Card -->
+    <div class="card">
+      <!-- Header -->
+      <div class="card-header">
+        <h1 class="names">{{ APP_CONFIG.BRIDE_NAME }} & {{ APP_CONFIG.GROOM_NAME }}</h1>
+        <p class="subtitle">{{ APP_CONFIG.APP_NAME }}</p>
+        <div class="date-badge">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          {{ formattedDate }}
         </div>
-
-        <!-- Gifts List -->
-        <section class="gifts-section">
-          <div v-if="loading" class="loading">Carregando presentes...</div>
-          <GiftList v-else :gifts="filteredGifts" @reserve="handleReserve" />
-        </section>
       </div>
-    </main>
 
-    <!-- Footer -->
-    <footer class="footer">
-      <p class="footer__text">
-        Feito com 💕 por {{ APP_CONFIG.BRIDE_NAME }} & {{ APP_CONFIG.GROOM_NAME }}
-      </p>
-    </footer>
+      <!-- Divider -->
+      <div class="divider"></div>
 
-    <!-- Reserve Modal -->
-    <ReserveModal />
+      <!-- Action Buttons -->
+      <div class="buttons-container">
+        <router-link to="/confirmar-presenca" class="btn btn-gold">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          Confirmar Presença
+        </router-link>
+
+        <button @click="showPixModal = true" class="btn btn-emerald">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Presentear via PIX
+        </button>
+
+        <button v-if="linkNaBioUrl" @click="openLinkNaBio" class="btn btn-purple">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+          </svg>
+          Presentear via Cartão
+        </button>
+
+        <a
+          href="https://lista.havan.com.br/Convidado/ItensListaPresente/901773"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn btn-rose"
+        >
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+          </svg>
+          Lista de Presentes na Havan
+        </a>
+      </div>
+
+      <!-- Footer -->
+      <div class="card-footer">
+        <p>Feito com amor para celebrar nosso casamento</p>
+      </div>
+    </div>
 
     <!-- PIX Modal -->
     <PixModal :is-open="showPixModal" @close="showPixModal = false" />
 
-
     <!-- Notification Container -->
     <NotificationContainer />
-
-    <!-- Payment Confirmation (apos retorno do Infinity Pay) -->
-    <PaymentConfirmation />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
-import { useGiftStore } from '@/stores/gift.store'
-import { useModal } from '@/composables/useModal'
+import { ref, computed } from 'vue'
 import { APP_CONFIG } from '@/utils/constants'
-
-// Components
-import AppHeader from '@/components/layout/AppHeader.vue'
-import TypeFilter from '@/components/gift/TypeFilter.vue'
-import CategoryFilter from '@/components/gift/CategoryFilter.vue'
-import GiftList from '@/components/gift/GiftList.vue'
+import { formatDate } from '@/utils/helpers'
 import PixModal from '@/components/pix/PixModal.vue'
-import ReserveModal from '@/components/modal/ReserveModal.vue'
 import NotificationContainer from '@/components/common/NotificationContainer.vue'
-import PaymentConfirmation from '@/components/payment/PaymentConfirmation.vue'
 
-// ========================================
-// Composables
-// ========================================
-const giftStore = useGiftStore()
-const modal = useModal()
-
-// ========================================
-// State
-// ========================================
-const selectedType = ref('all')
-const selectedCategory = ref('all')
-const searchQuery = ref('')
-const searchExpanded = ref(false)
-const searchInput = ref(null)
 const showPixModal = ref(false)
 const linkNaBioUrl = import.meta.env.VITE_INFINITYPAY_LINK_NA_BIO || ''
 
-// ========================================
-// Computed
-// ========================================
-const loading = computed(() => giftStore.loading)
-const gifts = computed(() => giftStore.gifts)
-
-// Tipos unicos baseados nos dados
-const uniqueTypes = computed(() => {
-  const types = [...new Set(gifts.value.map(g => g.type))]
-  return types.filter(Boolean)
-})
-
-// Opcoes de tipo para o filtro
-const typeOptions = computed(() => {
-  const options = [
-    { value: 'all', label: 'Todos', count: gifts.value.length }
-  ]
-
-  uniqueTypes.value.forEach(type => {
-    const count = gifts.value.filter(g => g.type === type).length
-    options.push({ value: type, label: type, count })
-  })
-
-  return options
-})
-
-// Presentes filtrados por tipo
-const giftsByType = computed(() => {
-  if (selectedType.value === 'all') {
-    return gifts.value
-  }
-  return gifts.value.filter(g => g.type === selectedType.value)
-})
-
-// Categorias baseadas no tipo selecionado
-const categoryOptions = computed(() => {
-  const categories = [...new Set(giftsByType.value.map(g => g.category))]
-  return ['all', ...categories.filter(Boolean)]
-})
-
-// Presentes filtrados por tipo, categoria e busca
-const filteredGifts = computed(() => {
-  let result = giftsByType.value
-
-  if (selectedCategory.value !== 'all') {
-    result = result.filter(g => g.category === selectedCategory.value)
-  }
-
-  // Filtro de busca
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim()
-    result = result.filter(g =>
-      g.name?.toLowerCase().includes(query) ||
-      g.description?.toLowerCase().includes(query) ||
-      g.category?.toLowerCase().includes(query)
-    )
-  }
-
-  return result
-})
-
-// Stats baseado no filtro atual
-const currentStats = computed(() => {
-  const list = filteredGifts.value
-  return {
-    total: list.length,
-    reserved: list.filter(g => g.status === 'reserved').length,
-    available: list.filter(g => g.status === 'available').length,
-  }
-})
-
-// ========================================
-// Watch
-// ========================================
-// Reset categoria quando mudar o tipo
-watch(selectedType, () => {
-  selectedCategory.value = 'all'
-})
-
-// ========================================
-// Lifecycle
-// ========================================
-onMounted(async () => {
-  await giftStore.loadGifts()
-})
-
-// ========================================
-// Methods
-// ========================================
-const handleReserve = (gift) => {
-  modal.open(gift)
-}
+const formattedDate = computed(() => formatDate(APP_CONFIG.WEDDING_DATE))
 
 const openLinkNaBio = () => {
   const width = 450
@@ -236,287 +91,163 @@ const openLinkNaBio = () => {
     `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
   )
 }
-
-const toggleSearch = () => {
-  searchExpanded.value = !searchExpanded.value
-  if (searchExpanded.value) {
-    nextTick(() => {
-      searchInput.value?.focus()
-    })
-  } else {
-    searchQuery.value = ''
-  }
-}
-
-const clearSearch = () => {
-  searchQuery.value = ''
-  searchInput.value?.focus()
-}
-
-const closeSearch = () => {
-  searchExpanded.value = false
-  searchQuery.value = ''
-}
-
-const handleSearchBlur = () => {
-  if (!searchQuery.value) {
-    searchExpanded.value = false
-  }
-}
 </script>
 
 <style scoped>
-.home-page {
+.page-container {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.main-content {
-  flex: 1;
-}
-
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-/* Top Bar - Stats + PIX Button */
-.top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 0;
-  margin-top: 1rem;
-  border-bottom: 1px solid #E8DCC8;
-}
-
-.stats-inline {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.875rem;
-  color: #8B7355;
-}
-
-.stats-inline__item strong {
-  color: #3d2b1f;
-  font-weight: 700;
-}
-
-.stats-inline__item--available strong {
-  color: #2a9d8f;
-}
-
-.stats-inline__item--reserved strong {
-  color: #8B3A3A;
-}
-
-.stats-inline__separator {
-  color: #E8DCC8;
-}
-
-.payment-buttons {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.rsvp-button,
-.pix-button,
-.link-na-bio-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  color: white;
-  border: none;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-}
-
-.rsvp-button {
-  background: linear-gradient(135deg, #D4A574 0%, #E8C89E 100%);
-  box-shadow: 0 2px 8px rgba(212, 165, 116, 0.3);
-}
-
-.rsvp-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(212, 165, 116, 0.4);
-}
-
-.pix-button {
-  background: linear-gradient(135deg, #2a9d8f 0%, #40E0D0 100%);
-  box-shadow: 0 2px 8px rgba(42, 157, 143, 0.3);
-}
-
-.pix-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(42, 157, 143, 0.4);
-}
-
-.link-na-bio-button {
-  background: linear-gradient(135deg, #8B3A3A 0%, #C45C5C 100%);
-  box-shadow: 0 2px 8px rgba(139, 58, 58, 0.3);
-}
-
-.link-na-bio-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(139, 58, 58, 0.4);
-}
-
-/* Type Filter Section */
-.type-filter-section {
-  padding: 1rem 0;
-}
-
-/* Filter Section */
-.filter-section {
-  padding: 0.5rem 0 1rem;
-}
-
-/* Search Box */
-.search-box {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-bottom: 0.5rem;
-  max-width: 100%;
-}
-
-.search-toggle {
-  width: 2.25rem;
-  height: 2.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #FFF9F0;
-  border: 1px solid #E8DCC8;
-  border-radius: 50%;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #fefdfb 0%, #faf4e8 50%, #f5ebd7 100%);
 }
 
-.search-toggle:hover {
-  background: #E8DCC8;
-  border-color: #D4A574;
-}
-
-.search-box--expanded .search-toggle {
-  border-radius: 0 0.5rem 0.5rem 0;
-  border-left: none;
-}
-
-.search-input {
-  flex: 1;
-  min-width: 0;
-  max-width: 220px;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-  border: 1px solid #E8DCC8;
-  border-right: none;
-  border-radius: 0.5rem 0 0 0.5rem;
-  background: #FFF9F0;
-  color: #3d2b1f;
-}
-
-.search-input::placeholder {
-  color: #8B7355;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #D4A574;
-}
-
-@media (max-width: 480px) {
-  .search-input {
-    max-width: 160px;
-  }
-}
-
-/* Gifts Section */
-.gifts-section {
-  padding: 0.5rem 0 2rem;
-}
-
-.loading {
-  text-align: center;
-  padding: 3rem;
-  color: #8B7355;
-  font-size: 1rem;
-}
-
-/* Footer */
-.footer {
+.card {
   width: 100%;
-  padding: 1.25rem;
-  background: #3d2b1f;
-  color: #FFF9F0;
+  max-width: 420px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 2.5rem 2rem 2rem;
+  text-align: center;
+  background: linear-gradient(180deg, #fffbf5 0%, #ffffff 100%);
+}
+
+.names {
+  font-family: 'Great Vibes', cursive;
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: #8B3A3A;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-bottom: 1.25rem;
+}
+
+.date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #d4b76a 0%, #c9a24a 100%);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 50px;
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #d4b76a 50%, transparent 100%);
+}
+
+.buttons-container {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem 1.5rem;
+  font-family: 'Lato', sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: white;
+  text-decoration: none;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #d4b76a 0%, #b8893d 100%);
+}
+
+.btn-gold:hover {
+  background: linear-gradient(135deg, #e0c57a 0%, #c9a24a 100%);
+}
+
+.btn-emerald {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.btn-emerald:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+}
+
+.btn-purple {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+}
+
+.btn-purple:hover {
+  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 100%);
+}
+
+.btn-rose {
+  background: linear-gradient(135deg, #8B3A3A 0%, #6a2a2a 100%);
+}
+
+.btn-rose:hover {
+  background: linear-gradient(135deg, #a04545 0%, #8B3A3A 100%);
+}
+
+.card-footer {
+  padding: 1rem 1.5rem;
+  background: #faf9f7;
   text-align: center;
 }
 
-.footer__text {
+.card-footer p {
+  font-size: 0.75rem;
+  color: #9ca3af;
   margin: 0;
-  font-size: 0.8rem;
-  opacity: 0.9;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .container {
-    padding: 0 1rem;
-  }
-
-  .top-bar {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-    text-align: center;
-  }
-
-  .stats-inline {
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .payment-buttons {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .rsvp-button,
-  .pix-button,
-  .link-na-bio-button {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .gifts-section {
-    padding: 0.5rem 0 1.5rem;
-  }
 }
 
 @media (max-width: 480px) {
-  .stats-inline {
-    font-size: 0.8rem;
+  .card {
+    border-radius: 20px;
   }
 
-  .stats-inline__separator {
-    display: none;
+  .names {
+    font-size: 2rem;
   }
 
-  .stats-inline__item {
-    padding: 0.25rem 0.5rem;
-    background: #FFF9F0;
-    border-radius: 0.25rem;
+  .card-header {
+    padding: 2rem 1.5rem 1.5rem;
+  }
+
+  .buttons-container {
+    padding: 1.25rem;
+  }
+
+  .btn {
+    padding: 0.875rem 1.25rem;
+    font-size: 0.875rem;
   }
 }
 </style>

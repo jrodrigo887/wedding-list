@@ -1,7 +1,9 @@
 // ========================================
 // INFINITY PAY SERVICE
-// Integração com API de Checkout via Proxy (Google Apps Script)
+// Integração direta com API de Checkout do InfinityPay
 // ========================================
+
+const INFINITYPAY_API_URL = 'https://api.infinitepay.io/invoices/public/checkout/links'
 
 /**
  * Configuração do Infinity Pay
@@ -10,8 +12,7 @@ const getConfig = () => ({
   handle: import.meta.env.VITE_INFINITYPAY_HANDLE || '',
   redirectUrl: import.meta.env.VITE_INFINITYPAY_REDIRECT_URL || `${window.location.origin}?pagamento=confirmado`,
   webhookUrl: import.meta.env.VITE_INFINITYPAY_WEBHOOK_URL || '',
-  // URL do Google Apps Script para proxy
-  proxyUrl: import.meta.env.VITE_GOOGLE_SCRIPT_URL || '',
+  googleScriptUrl: import.meta.env.VITE_GOOGLE_SCRIPT_URL || '',
 })
 
 /**
@@ -24,12 +25,12 @@ export const infinityPayService = {
    */
   isConfigured() {
     const config = getConfig()
-    return !!config.handle && !!config.proxyUrl
+    return !!config.handle
   },
 
   /**
    * Gera um link de pagamento para um presente
-   * Usa o Google Apps Script como proxy para evitar CORS
+   * Chama diretamente a API do InfinityPay
    * @param {Object} gift - Dados do presente
    * @param {Object} customer - Dados do cliente
    * @returns {Promise<Object>} - URL do checkout e dados da transação
@@ -41,15 +42,10 @@ export const infinityPayService = {
       throw new Error('Infinity Pay não configurado. Configure VITE_INFINITYPAY_HANDLE no .env')
     }
 
-    if (!config.proxyUrl) {
-      throw new Error('URL do Google Apps Script não configurada. Configure VITE_GOOGLE_SCRIPT_URL no .env')
-    }
-
     const orderNsu = `gift_${gift.id}_${Date.now()}`
 
-    // Prepara o payload para o proxy (Google Apps Script)
+    // Prepara o payload para a API do InfinityPay
     const payload = {
-      action: 'createCheckoutLink',
       handle: config.handle,
       items: [
         {
@@ -72,24 +68,28 @@ export const infinityPayService = {
       payload.webhook_url = config.webhookUrl
     }
 
-    console.log('[InfinityPay] Criando link de pagamento via proxy:', payload)
+    console.log('[InfinityPay] Criando link de pagamento:', payload)
 
     try {
-      // Envia para o Google Apps Script (proxy)
-      const response = await fetch(config.proxyUrl, {
+      const response = await fetch(INFINITYPAY_API_URL, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload),
       })
 
-      const data = await response.json()
-      console.log('[InfinityPay] Resposta do proxy:', data)
-
-      if (!data.success) {
-        throw new Error(data.error || 'Erro ao criar link de pagamento')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[InfinityPay] Erro na resposta:', response.status, errorText)
+        throw new Error(`Erro ao criar checkout: ${response.status}`)
       }
 
+      const data = await response.json()
+      console.log('[InfinityPay] Resposta:', data)
+
       return {
-        checkoutUrl: data.checkoutUrl || data.url,
+        checkoutUrl: data.url || data.checkout_url,
         orderNsu: orderNsu,
         ...data,
       }
@@ -97,6 +97,42 @@ export const infinityPayService = {
       console.error('[InfinityPay] Falha ao criar checkout:', error)
       throw error
     }
+  },
+
+  /**
+   * Reserva o presente no Google Sheets após pagamento confirmado
+   * @param {Object} reservationData - Dados da reserva
+   * @returns {Promise<Object>}
+   */
+  async confirmReservation(reservationData) {
+    const config = getConfig()
+
+    if (!config.googleScriptUrl) {
+      throw new Error('URL do Google Apps Script não configurada')
+    }
+
+    const formData = new FormData()
+    formData.append('action', 'reserveGift')
+    formData.append('giftId', reservationData.giftId)
+    formData.append('nome', reservationData.customer.name)
+    formData.append('email', reservationData.customer.email)
+    formData.append('telefone', reservationData.customer.phone || '')
+    formData.append('mensagem', reservationData.customer.message || 'Pago via Infinity Pay')
+    formData.append('pago', 'true')
+    formData.append('transactionId', reservationData.orderNsu || '')
+
+    const response = await fetch(config.googleScriptUrl, {
+      method: 'POST',
+      body: formData,
+    })
+
+    const data = await response.json()
+
+    if (!data.success) {
+      throw new Error(data.error || 'Erro ao confirmar reserva')
+    }
+
+    return data
   },
 
   /**

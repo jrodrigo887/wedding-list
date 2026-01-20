@@ -1,303 +1,74 @@
 /* ========================================
-   🎨 GLOBAL STYLES
+   Tailwind CSS v4
    ======================================== */
+@import "tailwindcss";
 
 /* ========================================
-   CSS Variables
+   Google Fonts
    ======================================== */
-:root {
-  /* Colors - Tema Nordestino (Marsala, Turquesa, Bege) */
-  --color-primary: #8B3A3A;        /* Vermelho Marsala */
-  --color-primary-dark: #6B2929;    /* Marsala escuro */
-  --color-secondary: #40E0D0;       /* Azul Turquesa */
-  --color-accent: #D4A574;          /* Bege/Algodão Queimado */
-  --color-text: #3d2b1f;            /* Marrom terroso */
-  --color-text-light: #8B7355;      /* Marrom claro */
-  --color-border: #E8DCC8;          /* Bege claro */
-  --color-success: #28a745;
-  --color-error: #dc3545;
-  --color-warning: #ffc107;
-  --color-info: #40E0D0;            /* Turquesa para info */
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Lato:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
 
-  /* Spacing */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --spacing-2xl: 3rem;
-  --spacing-3xl: 4rem;
+/* ========================================
+   CSS Variables (Theme)
+   ======================================== */
+@theme {
+  --font-script: 'Great Vibes', cursive;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Lato', system-ui, sans-serif;
 
-  /* Border Radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-full: 9999px;
+  --color-gold-50: #fbf9f0;
+  --color-gold-100: #f5f0db;
+  --color-gold-200: #ebe0b8;
+  --color-gold-300: #ddc98c;
+  --color-gold-400: #d4b76a;
+  --color-gold-500: #c9a24a;
+  --color-gold-600: #b8893d;
+  --color-gold-700: #996a34;
+  --color-gold-800: #7c5531;
+  --color-gold-900: #66472b;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.15);
+  --color-cream-50: #fefdfb;
+  --color-cream-100: #fdf9f3;
+  --color-cream-200: #faf4e8;
+  --color-cream-300: #f5ebd7;
 
-  /* Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-md: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 2rem;
-
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-normal: 300ms ease;
-  --transition-slow: 500ms ease;
-
-  /* Breakpoints (for reference) */
-  --breakpoint-sm: 640px;
-  --breakpoint-md: 768px;
-  --breakpoint-lg: 1024px;
-  --breakpoint-xl: 1280px;
+  --color-marsala-500: #8B3A3A;
+  --color-marsala-600: #7a3232;
+  --color-marsala-700: #6a2a2a;
 }
 
 /* ========================================
-   CSS Reset
+   Base Styles
    ======================================== */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
 html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
 }
 
 body {
-  font-family: var(--font-family);
-  font-size: var(--font-size-md);
-  line-height: 1.6;
-  color: var(--color-text);
-  background: linear-gradient(to bottom, #FFF9F0 0%, #F5E6D3 100%);
+  font-family: var(--font-sans);
+  color: #3d2b1f;
   min-height: 100vh;
+  background: linear-gradient(135deg, #fefdfb 0%, #faf4e8 50%, #f5ebd7 100%);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 600;
 }
 
 /* ========================================
-   Typography
+   Custom Utility Classes
    ======================================== */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-weight: 700;
-  line-height: 1.2;
-  margin-bottom: 1rem;
+.font-script {
+  font-family: var(--font-script);
 }
 
-h1 {
-  font-size: var(--font-size-3xl);
+.font-serif {
+  font-family: var(--font-serif);
 }
 
-h2 {
-  font-size: var(--font-size-2xl);
-}
-
-h3 {
-  font-size: var(--font-size-xl);
-}
-
-p {
-  margin-bottom: 1rem;
-}
-
-a {
-  color: var(--color-primary);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-a:hover {
-  color: var(--color-primary-dark);
-}
-
-/* ========================================
-   Forms
-   ======================================== */
-input,
-textarea,
-select,
-button {
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-}
-
-button {
-  cursor: pointer;
-}
-
-button:disabled {
-  cursor: not-allowed;
-}
-
-/* ========================================
-   Images
-   ======================================== */
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* ========================================
-   Utilities
-   ======================================== */
-.container {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
-
-/* ========================================
-   Animations
-   ======================================== */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideDown {
-  from {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* ========================================
-   Scrollbar Styling
-   ======================================== */
-::-webkit-scrollbar {
-  width: 12px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f8f9fa;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #dee2e6;
-  border-radius: 6px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #ced4da;
-}
-
-/* ========================================
-   Selection
-   ======================================== */
-::selection {
-  background: var(--color-primary);
-  color: white;
-}
-
-::-moz-selection {
-  background: var(--color-primary);
-  color: white;
-}
-
-/* ========================================
-   Focus Visible
-   ======================================== */
-:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-/* ========================================
-   Accessibility
-   ======================================== */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ========================================
-   Print Styles
-   ======================================== */
-@media print {
-  body {
-    background: white;
-  }
-
-  .no-print {
-    display: none;
-  }
+.font-sans {
+  font-family: var(--font-sans);
 }

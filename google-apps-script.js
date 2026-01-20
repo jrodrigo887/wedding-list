@@ -12,10 +12,11 @@ const CONFIG = {
   SHEET_GIFTS: 'Presentes',
   SHEET_RESERVATIONS: 'Reservas',
   SHEET_PAYMENTS: 'Pagamentos', // Nova aba para pagamentos
+  SHEET_GUESTS: 'Convidados', // Aba para lista de convidados RSVP
 }
 
 /**
- * Endpoint GET - Buscar presentes
+ * Endpoint GET - Buscar presentes ou verificar convidado
  */
 function doGet(e) {
   try {
@@ -25,7 +26,13 @@ function doGet(e) {
       return getGiftsResponse()
     }
 
-    return createJsonResponse({ error: 'Ação não reconhecida' })
+    // RSVP: Verificar codigo do convidado
+    if (action === 'checkGuest') {
+      const code = e.parameter.code
+      return checkGuestCode(code)
+    }
+
+    return createJsonResponse({ error: 'Acao nao reconhecida' })
   } catch (error) {
     return createJsonResponse({ error: error.message })
   }
@@ -57,7 +64,12 @@ function doPost(e) {
       return reserveGiftResponse(data)
     }
 
-    return createJsonResponse({ error: 'Ação não reconhecida' })
+    // RSVP: Confirmar presenca
+    if (action === 'confirmPresence') {
+      return confirmGuestPresence(data)
+    }
+
+    return createJsonResponse({ error: 'Acao nao reconhecida' })
   } catch (error) {
     Logger.log('Erro no doPost: ' + error.message)
     return createJsonResponse({ error: error.message })
@@ -163,64 +175,6 @@ function reserveGiftResponse(data) {
   })
 }
 
-/**
- * Processa webhook do Infinity Pay
- */
-function handleInfinityPayWebhook(data) {
-  Logger.log('Webhook Infinity Pay recebido: ' + JSON.stringify(data))
-
-  try {
-    // Extrai informações do webhook
-    const orderNsu = data.order_nsu || ''
-    const transactionNsu = data.transaction_nsu || ''
-    const amount = data.amount || 0
-    const paid = data.paid || data.success || false
-    const captureMethod = data.capture_method || ''
-    const receiptUrl = data.receipt_url || ''
-
-    // Extrai giftId do order_nsu (formato: gift_123_timestamp)
-    const giftIdMatch = orderNsu.match(/gift_(\d+)_/)
-    if (!giftIdMatch) {
-      Logger.log('Formato de order_nsu inválido: ' + orderNsu)
-      return createJsonResponse({ success: false, error: 'Formato de order_nsu inválido' })
-    }
-
-    const giftId = giftIdMatch[1]
-
-    // Registra o pagamento
-    logPayment({
-      transactionNsu,
-      orderNsu,
-      giftId,
-      amount,
-      captureMethod,
-      receiptUrl,
-      rawData: JSON.stringify(data),
-    })
-
-    // Se pagamento confirmado, reserva automaticamente
-    if (paid) {
-      // Busca dados do cliente da transação pendente (se salvos)
-      // Como não temos esses dados no webhook, deixamos vazio
-      const reserveData = {
-        giftId: giftId,
-        nome: data.customer?.name || 'Pagamento Infinity Pay',
-        email: data.customer?.email || '',
-        telefone: '',
-        mensagem: 'Pago via Infinity Pay - ' + captureMethod,
-        pago: true,
-        transactionId: transactionNsu,
-      }
-
-      return reserveGiftResponse(reserveData)
-    }
-
-    return createJsonResponse({ success: true, message: 'Webhook processado' })
-  } catch (error) {
-    Logger.log('Erro ao processar webhook: ' + error.message)
-    return createJsonResponse({ success: false, error: error.message })
-  }
-}
 
 /**
  * Registra a reserva na aba de reservas
@@ -382,4 +336,164 @@ function setupSheets() {
   }
 
   Logger.log('Planilhas configuradas com sucesso!')
+}
+
+// ========================================
+// FUNCOES DE RSVP - CONFIRMACAO DE PRESENCA
+// ========================================
+
+/**
+ * Verifica se o codigo do convidado existe
+ * @param {string} code - Codigo do convidado
+ */
+function checkGuestCode(code) {
+  if (!code) {
+    return createJsonResponse({
+      success: false,
+      error: 'Codigo nao informado',
+    })
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_GUESTS)
+
+  if (!sheet) {
+    return createJsonResponse({
+      success: false,
+      error: 'Planilha de convidados nao encontrada. Execute setupGuestsSheet() primeiro.',
+    })
+  }
+
+  const data = sheet.getDataRange().getValues()
+
+  // Procura o codigo na primeira coluna (A)
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).toUpperCase() === String(code).toUpperCase()) {
+      const guest = {
+        codigo: data[i][0],
+        nome: data[i][1],
+        parceiro: data[i][2] || '',
+        acompanhantes: data[i][3] || 0,
+        confirmado: data[i][4] === true || data[i][4] === 'TRUE' || data[i][4] === 'Sim',
+      }
+
+      return createJsonResponse({
+        success: true,
+        guest: guest,
+      })
+    }
+  }
+
+  return createJsonResponse({
+    success: false,
+    error: 'Codigo nao encontrado na lista de convidados. Por favor, verifique com os noivos.',
+  })
+}
+
+/**
+ * Confirma presenca do convidado
+ * @param {object} data - Dados da confirmacao
+ */
+function confirmGuestPresence(data) {
+  const code = data.code
+
+  if (!code) {
+    return createJsonResponse({
+      success: false,
+      error: 'Codigo nao informado',
+    })
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_GUESTS)
+
+  if (!sheet) {
+    return createJsonResponse({
+      success: false,
+      error: 'Planilha de convidados nao encontrada',
+    })
+  }
+
+  const dataRange = sheet.getDataRange().getValues()
+  let rowIndex = -1
+
+  // Procura o codigo na primeira coluna (A)
+  for (let i = 1; i < dataRange.length; i++) {
+    if (String(dataRange[i][0]).toUpperCase() === String(code).toUpperCase()) {
+      rowIndex = i + 1 // +1 porque getValues e 0-indexed mas sheet e 1-indexed
+      break
+    }
+  }
+
+  if (rowIndex === -1) {
+    return createJsonResponse({
+      success: false,
+      error: 'Codigo nao encontrado na lista de convidados. Por favor, verifique com os noivos.',
+    })
+  }
+
+  // Atualiza a confirmacao na coluna E (5)
+  sheet.getRange(rowIndex, 5).setValue(true)
+
+  // Registra a data/hora da confirmacao na coluna F (6)
+  sheet.getRange(rowIndex, 6).setValue(new Date().toLocaleString('pt-BR'))
+
+  const guestName = dataRange[rowIndex - 1][1]
+  const partnerName = dataRange[rowIndex - 1][2]
+
+  let message = `Presenca confirmada com sucesso, ${guestName}!`
+  if (partnerName) {
+    message = `Presenca confirmada com sucesso, ${guestName} e ${partnerName}!`
+  }
+
+  return createJsonResponse({
+    success: true,
+    message: message,
+    guest: {
+      codigo: dataRange[rowIndex - 1][0],
+      nome: guestName,
+      parceiro: partnerName,
+      acompanhantes: dataRange[rowIndex - 1][3] || 0,
+      confirmado: true,
+    },
+  })
+}
+
+/**
+ * Configura a planilha de convidados
+ * Execute esta funcao uma vez para criar a estrutura
+ */
+function setupGuestsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+
+  let guestsSheet = ss.getSheetByName(CONFIG.SHEET_GUESTS)
+  if (!guestsSheet) {
+    guestsSheet = ss.insertSheet(CONFIG.SHEET_GUESTS)
+    guestsSheet.appendRow([
+      'Codigo',
+      'Nome',
+      'Parceiro(a)',
+      'Acompanhantes',
+      'Confirmado',
+      'Data Confirmacao',
+    ])
+
+    // Exemplos de convidados
+    guestsSheet.appendRow(['ABC123', 'Joao Silva', 'Maria Silva', 2, false, ''])
+    guestsSheet.appendRow(['XYZ789', 'Pedro Santos', '', 0, false, ''])
+    guestsSheet.appendRow(['DEF456', 'Ana Costa', 'Carlos Costa', 1, false, ''])
+
+    // Formata o cabecalho
+    const headerRange = guestsSheet.getRange(1, 1, 1, 6)
+    headerRange.setFontWeight('bold')
+    headerRange.setBackground('#E8DCC8')
+
+    // Ajusta largura das colunas
+    guestsSheet.setColumnWidth(1, 100) // Codigo
+    guestsSheet.setColumnWidth(2, 200) // Nome
+    guestsSheet.setColumnWidth(3, 200) // Parceiro
+    guestsSheet.setColumnWidth(4, 120) // Acompanhantes
+    guestsSheet.setColumnWidth(5, 100) // Confirmado
+    guestsSheet.setColumnWidth(6, 180) // Data Confirmacao
+  }
+
+  Logger.log('Planilha de convidados configurada com sucesso!')
 }
