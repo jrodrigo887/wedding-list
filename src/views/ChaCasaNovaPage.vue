@@ -36,7 +36,7 @@ import conviteImage from '@/assets/cha-casa-nova.png'
 
 // Mensagem padrão do WhatsApp - você pode alterar aqui
 const phoneNumber = '5583987083837'
-const defaultMessage = 'Olá! Gostaria de confirmar minha presença no Chá de Casa Nova do Rodrigo e Elisa no dia 21/02/2026. \n Nome: [auto]'
+const defaultMessage = 'Olá! Gostaria de confirmar minha presença no Chá de Casa Nova do Rodrigo e Elisa no dia 21/02/2026. \n Nome: [autor]'
 
 const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(defaultMessage)}`
 </script>
