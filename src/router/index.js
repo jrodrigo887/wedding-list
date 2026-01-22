@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '@/views/HomePage.vue'
 import RsvpPage from '@/views/RsvpPage.vue'
 import ChaCasaNovaPage from '@/views/ChaCasaNovaPage.vue'
+import CheckinPage from '@/views/CheckinPage.vue'
 
 const routes = [
   {
@@ -20,6 +21,11 @@ const routes = [
     path: '/cha-de-casa-nova',
     name: 'cha-casa-nova',
     component: ChaCasaNovaPage,
+  },
+  {
+    path: '/checkin',
+    name: 'checkin',
+    component: CheckinPage,
   },
   // Redirect para pagina inicial se rota nao existir
   {

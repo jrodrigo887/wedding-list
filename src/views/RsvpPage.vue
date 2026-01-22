@@ -117,6 +117,63 @@
           <p class="rsvp-success__message">
             {{ confirmationMessage }}
           </p>
+
+          <!-- QR Code Section -->
+          <div class="rsvp-qrcode">
+            <h3 class="rsvp-qrcode__title">Seu QR Code para Check-in</h3>
+            <p class="rsvp-qrcode__subtitle">
+              Apresente este codigo na entrada do evento
+            </p>
+
+            <div v-if="qrCodeLoading" class="rsvp-qrcode__loading">
+              Gerando QR Code...
+            </div>
+
+            <div v-else-if="qrCodeDataUrl" class="rsvp-qrcode__image-container">
+              <img :src="qrCodeDataUrl" alt="QR Code para check-in" class="rsvp-qrcode__image" />
+              <p class="rsvp-qrcode__code">{{ getFullCode() }}</p>
+            </div>
+
+            <div class="rsvp-qrcode__actions">
+              <button
+                class="rsvp-qrcode__download-btn"
+                :disabled="!qrCodeDataUrl"
+                @click="downloadQRCode"
+              >
+                📥 Salvar QR Code
+              </button>
+            </div>
+
+            <!-- Email Section -->
+            <div v-if="!emailSent" class="rsvp-qrcode__email">
+              <p class="rsvp-qrcode__email-label">Receber QR Code por email:</p>
+              <div class="rsvp-qrcode__email-form">
+                <input
+                  v-model="guestEmail"
+                  type="email"
+                  class="rsvp-qrcode__email-input"
+                  placeholder="seu@email.com"
+                  :disabled="emailSending"
+                />
+                <button
+                  class="rsvp-qrcode__email-btn"
+                  :disabled="emailSending || !guestEmail.trim()"
+                  @click="sendQRCodeByEmail"
+                >
+                  <span v-if="emailSending">Enviando...</span>
+                  <span v-else>Enviar</span>
+                </button>
+              </div>
+              <p v-if="emailError" class="rsvp-qrcode__email-error">
+                {{ emailError }}
+              </p>
+            </div>
+
+            <div v-else class="rsvp-qrcode__email-success">
+              ✅ QR Code enviado para {{ guestEmail }}
+            </div>
+          </div>
+
           <p class="rsvp-success__see-you">
             Nos vemos no grande dia!
           </p>
@@ -234,6 +291,7 @@
 import { ref, computed } from 'vue'
 import { APP_CONFIG } from '@/utils/constants'
 import rsvpService from '@/services/rsvp.service'
+import qrcodeService from '@/services/qrcode.service'
 
 // State
 const code = ref('')
@@ -247,6 +305,14 @@ const showCancelModal = ref(false)
 const showDeclineModal = ref(false)
 const cancelling = ref(false)
 const declined = ref(false)
+
+// QR Code state
+const qrCodeDataUrl = ref('')
+const qrCodeLoading = ref(false)
+const emailSending = ref(false)
+const emailSent = ref(false)
+const emailError = ref('')
+const guestEmail = ref('')
 
 // Computed
 const totalPeople = computed(() => {
@@ -301,10 +367,57 @@ const confirmPresence = async () => {
     const result = await rsvpService.confirmPresence(getFullCode())
     confirmationMessage.value = result.message
     confirmed.value = true
+
+    console.log('gerar qrcode');
+    
+    await generateQRCode()
   } catch (err) {
     error.value = err.message || 'Erro ao confirmar presenca. Tente novamente.'
   } finally {
     confirming.value = false
+  }
+}
+
+// QR Code Methods
+const generateQRCode = async () => {
+  qrCodeLoading.value = true
+  try {
+    
+    qrCodeDataUrl.value = await qrcodeService.generateWeddingQRCode(getFullCode())
+  } catch (err) {
+    console.error('Erro ao gerar QR Code:', err)
+  } finally {
+    qrCodeLoading.value = false
+  }
+}
+
+const downloadQRCode = () => {
+  if (qrCodeDataUrl.value) {
+    const guestName = guest.value?.nome || 'convidado'
+    qrcodeService.downloadQRCode(qrCodeDataUrl.value, `qrcode-${guestName}.png`)
+  }
+}
+
+const sendQRCodeByEmail = async () => {
+  if (!guestEmail.value.trim()) {
+    emailError.value = 'Digite um email valido'
+    return
+  }
+
+  emailSending.value = true
+  emailError.value = ''
+
+  try {
+    await rsvpService.sendQRCodeEmail({
+      code: getFullCode(),
+      email: guestEmail.value,
+      name: guest.value?.nome || 'Convidado',
+    })
+    emailSent.value = true
+  } catch (err) {
+    emailError.value = err.message || 'Erro ao enviar email'
+  } finally {
+    emailSending.value = false
   }
 }
 
@@ -733,6 +846,161 @@ const reset = () => {
 .rsvp-success__link:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(139, 58, 58, 0.3);
+}
+
+/* QR Code */
+.rsvp-qrcode {
+  background: #FFF9F0;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  border: 2px dashed #E8DCC8;
+}
+
+.rsvp-qrcode__title {
+  font-size: 1.1rem;
+  color: #3d2b1f;
+  margin: 0 0 0.25rem;
+  text-align: center;
+}
+
+.rsvp-qrcode__subtitle {
+  font-size: 0.85rem;
+  color: #8B7355;
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.rsvp-qrcode__loading {
+  text-align: center;
+  padding: 2rem;
+  color: #8B7355;
+}
+
+.rsvp-qrcode__image-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.rsvp-qrcode__image {
+  width: 200px;
+  height: 200px;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.rsvp-qrcode__code {
+  margin: 0.75rem 0 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #3d2b1f;
+  font-family: monospace;
+  letter-spacing: 0.1em;
+}
+
+.rsvp-qrcode__actions {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.rsvp-qrcode__download-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #2a9d8f 0%, #40E0D0 100%);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rsvp-qrcode__download-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(42, 157, 143, 0.3);
+}
+
+.rsvp-qrcode__download-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rsvp-qrcode__email {
+  border-top: 1px solid #E8DCC8;
+  padding-top: 1rem;
+}
+
+.rsvp-qrcode__email-label {
+  font-size: 0.9rem;
+  color: #5a4a3a;
+  margin: 0 0 0.5rem;
+  text-align: center;
+}
+
+.rsvp-qrcode__email-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.rsvp-qrcode__email-input {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  border: 2px solid #E8DCC8;
+  border-radius: 0.5rem;
+  background: white;
+  color: #3d2b1f;
+}
+
+.rsvp-qrcode__email-input:focus {
+  outline: none;
+  border-color: #D4A574;
+}
+
+.rsvp-qrcode__email-btn {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #8B3A3A 0%, #C45C5C 100%);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.rsvp-qrcode__email-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.rsvp-qrcode__email-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rsvp-qrcode__email-error {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem;
+  background: #FEE2E2;
+  color: #991B1B;
+  border-radius: 0.25rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.rsvp-qrcode__email-success {
+  text-align: center;
+  padding: 0.75rem;
+  background: #D1FAE5;
+  color: #065F46;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  border-top: 1px solid #E8DCC8;
+  margin-top: 1rem;
 }
 
 /* Declined */
