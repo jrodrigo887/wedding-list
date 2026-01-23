@@ -251,6 +251,23 @@ export const rsvpService = {
     };
   },
 
+/**
+   * Busca a quantidade de check-ins realizados
+   */
+  async getCheckinCount(): Promise<number> {
+    const { count, error } = await supabase
+      .from("convidados")
+      .select("*", { count: "exact", head: true })
+      .eq("checkin", true);
+
+    if (error) {
+      console.error("[Supabase] Erro ao buscar contagem de check-ins:", error);
+      return 0;
+    }
+
+    return count || 0;
+  },
+
   async sendQRCodeEmail(params: {
     code: string;
     email: string;

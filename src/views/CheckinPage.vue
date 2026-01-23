@@ -228,16 +228,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, watch } from 'vue'
 import { APP_CONFIG } from '@/utils/constants'
 import rsvpService from '@/services/rsvp.service'
 import { Html5Qrcode } from 'html5-qrcode'
 import type { Guest } from '@/types'
+import { useAuthPin } from '@/composables/useAuthPin'
 
-// Auth state
-const authenticated = ref(false)
-const pin = ref('')
-const authError = ref('')
+// Auth state (from composable)
+const {
+  authenticated,
+  pin,
+  authError,
+  validatePin: validatePinFromComposable,
+  logout: logoutFromComposable,
+} = useAuthPin()
 
 // Check-in state
 const code = ref('')
@@ -264,18 +269,33 @@ const totalPeople = computed(() => {
   return 1 + hasParceiro + (Number(guest.value.acompanhantes) || 0)
 })
 
-// Methods
-const validatePin = (): void => {
-  const correctPin = import.meta.env.VITE_CHECKIN_PIN
+// Carrega contagem de check-ins do Supabase
+const loadCheckinCount = async (): Promise<void> => {
+  try {
+    checkedInCount.value = await rsvpService.getCheckinCount()
+  } catch (err) {
+    console.error('Erro ao carregar contagem de check-ins:', err)
+  }
+}
 
-  if (pin.value === correctPin) {
-    authenticated.value = true
-    authError.value = ''
+// Carrega a contagem quando autenticado
+watch(
+  authenticated,
+  async (isAuthenticated) => {
+    if (isAuthenticated) {
+      await loadCheckinCount()
+    }
+  },
+  { immediate: true }
+)
+
+// Methods
+const validatePin = async (): Promise<void> => {
+  await validatePinFromComposable()
+  if (authenticated.value) {
     nextTick(() => {
       codeInput.value?.focus()
     })
-  } else {
-    authError.value = 'PIN incorreto. Tente novamente.'
   }
 }
 
@@ -316,9 +336,9 @@ const performCheckin = async (): Promise<void> => {
     await rsvpService.registerCheckin(getFullCode())
     lastCheckedInGuest.value =
       guest.value.nome + (guest.value.parceiro ? ` e ${guest.value.parceiro}` : '')
-    checkedInCount.value++
     checkinSuccess.value = true
     guest.value = null
+    await loadCheckinCount()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Erro ao registrar check-in'
   } finally {
@@ -341,8 +361,7 @@ const resetAll = (): void => {
 }
 
 const logout = (): void => {
-  authenticated.value = false
-  pin.value = ''
+  logoutFromComposable()
   resetGuest()
   checkedInCount.value = 0
 }

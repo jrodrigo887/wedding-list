@@ -49,7 +49,8 @@
         <div class="rsvp-guest__card">
           <div class="rsvp-guest__icon">👋</div>
           <h2 class="rsvp-guest__greeting">
-            Ola, {{ guest.nome }}{{ guest.parceiro ? ` e ${guest.parceiro}` : '' }}!
+            Ola, {{ guest.nome
+            }}{{ guest.parceiro ? ` e ${guest.parceiro}` : "" }}!
           </h2>
 
           <div class="rsvp-guest__details">
@@ -103,9 +104,7 @@
             </div>
           </div>
 
-          <button class="rsvp-guest__back" @click="reset">
-            ← Voltar
-          </button>
+          <button class="rsvp-guest__back" @click="reset">← Voltar</button>
         </div>
       </div>
 
@@ -130,7 +129,11 @@
             </div>
 
             <div v-else-if="qrCodeDataUrl" class="rsvp-qrcode__image-container">
-              <img :src="qrCodeDataUrl" alt="QR Code para check-in" class="rsvp-qrcode__image" />
+              <img
+                :src="qrCodeDataUrl"
+                alt="QR Code para check-in"
+                class="rsvp-qrcode__image"
+              />
               <p class="rsvp-qrcode__code">{{ getFullCode() }}</p>
             </div>
 
@@ -174,9 +177,7 @@
             </div>
           </div>
 
-          <p class="rsvp-success__see-you">
-            Nos vemos no grande dia!
-          </p>
+          <p class="rsvp-success__see-you">Nos vemos no grande dia!</p>
           <p class="rsvp-success__date">
             {{ formattedWeddingDate }}
           </p>
@@ -193,7 +194,11 @@
       </div>
 
       <!-- Modal de Cancelamento -->
-      <div v-if="showCancelModal" class="rsvp-modal-overlay" @click.self="showCancelModal = false">
+      <div
+        v-if="showCancelModal"
+        class="rsvp-modal-overlay"
+        @click.self="showCancelModal = false"
+      >
         <div class="rsvp-modal">
           <div class="rsvp-modal__icon">⚠️</div>
           <h3 class="rsvp-modal__title">Cancelar Presenca</h3>
@@ -201,7 +206,8 @@
             Tem certeza que deseja cancelar sua presenca no casamento?
           </p>
           <p class="rsvp-modal__warning">
-            Esta acao ira remover sua confirmacao e voce precisara confirmar novamente caso mude de ideia.
+            Esta acao ira remover sua confirmacao e voce precisara confirmar
+            novamente caso mude de ideia.
           </p>
           <div class="rsvp-modal__actions">
             <button
@@ -224,7 +230,11 @@
       </div>
 
       <!-- Modal de Nao Comparecimento -->
-      <div v-if="showDeclineModal" class="rsvp-modal-overlay" @click.self="showDeclineModal = false">
+      <div
+        v-if="showDeclineModal"
+        class="rsvp-modal-overlay"
+        @click.self="showDeclineModal = false"
+      >
         <div class="rsvp-modal">
           <div class="rsvp-modal__icon">😢</div>
           <h3 class="rsvp-modal__title">Nao poderei comparecer</h3>
@@ -232,7 +242,8 @@
             Que pena que voce nao podera estar presente no nosso casamento!
           </p>
           <p class="rsvp-modal__info">
-            Ao confirmar, registraremos que voce nao podera comparecer. Caso mude de ideia, voce pode confirmar sua presenca a qualquer momento.
+            Ao confirmar, registraremos que voce nao podera comparecer. Caso
+            mude de ideia, voce pode confirmar sua presenca a qualquer momento.
           </p>
           <div class="rsvp-modal__actions">
             <button
@@ -260,10 +271,11 @@
           <div class="rsvp-declined__icon">📝</div>
           <h2 class="rsvp-declined__title">Ausencia Registrada</h2>
           <p class="rsvp-declined__message">
-            Registramos que voce nao podera comparecer ao casamento.
+            Registramos que você não poderá comparecer ao casamento.
           </p>
           <p class="rsvp-declined__note">
-            Sentiremos sua falta! Caso mude de ideia, voce pode confirmar sua presenca a qualquer momento.
+            Sentiremos sua falta! Caso mude de ideia, você pode confirmar sua
+            presença a qualquer momento.
           </p>
 
           <div class="rsvp-declined__actions">
@@ -288,187 +300,206 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { APP_CONFIG } from '@/utils/constants'
-import rsvpService from '@/services/rsvp.service'
-import qrcodeService from '@/services/qrcode.service'
-import type { Guest } from '@/types'
+import { ref, computed } from "vue";
+import { APP_CONFIG } from "@/utils/constants";
+import rsvpService from "@/services/rsvp.service";
+import qrcodeService from "@/services/qrcode.service";
+import type { Guest } from "@/types";
+
+import { useNotification } from "@/composables/useNotification";
 
 // State
-const code = ref('')
-const guest = ref<Guest | null>(null)
-const loading = ref(false)
-const confirming = ref(false)
-const confirmed = ref(false)
-const error = ref('')
-const confirmationMessage = ref('')
-const showCancelModal = ref(false)
-const showDeclineModal = ref(false)
-const cancelling = ref(false)
-const declined = ref(false)
+const code = ref("");
+const guest = ref<Guest | null>(null);
+const loading = ref(false);
+const confirming = ref(false);
+const confirmed = ref(false);
+const error = ref("");
+const confirmationMessage = ref("");
+const showCancelModal = ref(false);
+const showDeclineModal = ref(false);
+const cancelling = ref(false);
+const declined = ref(false);
 
 // QR Code state
-const qrCodeDataUrl = ref('')
-const qrCodeLoading = ref(false)
-const emailSending = ref(false)
-const emailSent = ref(false)
-const emailError = ref('')
-const guestEmail = ref('')
+const qrCodeDataUrl = ref("");
+const qrCodeLoading = ref(false);
+const emailSending = ref(false);
+const emailSent = ref(false);
+const emailError = ref("");
+const guestEmail = ref("");
+
+const notification = useNotification();
 
 // Computed
 const totalPeople = computed(() => {
-  if (!guest.value) return 0
-  const hasParceiro = guest.value.parceiro ? 1 : 0
-  return 1 + hasParceiro + (Number(guest.value.acompanhantes) || 0)
-})
+  if (!guest.value) return 0;
+  const hasParceiro = guest.value.parceiro ? 1 : 0;
+  return 1 + hasParceiro + (Number(guest.value.acompanhantes) || 0);
+});
 
 const formattedWeddingDate = computed(() => {
-  const date = new Date(APP_CONFIG.WEDDING_DATE + 'T12:00:00')
-  return date.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-})
+  const date = new Date(APP_CONFIG.WEDDING_DATE + "T12:00:00");
+  return date.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+});
 
 // Methods
 const onCodeInput = (event: Event): void => {
-  const target = event.target as HTMLInputElement
-  code.value = target.value.replace(/\D/g, '')
-}
+  const target = event.target as HTMLInputElement;
+  code.value = target.value.replace(/\D/g, "");
+};
 
 const getFullCode = (): string => {
-  return 'RE' + code.value.trim()
-}
+  return "RE" + code.value.trim();
+};
 
 const checkCode = async (): Promise<void> => {
-  if (!code.value.trim()) return
+  if (!code.value.trim()) return;
 
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
 
   try {
-    const result = await rsvpService.checkGuestCode(getFullCode())
-    guest.value = result
+    const result = await rsvpService.checkGuestCode(getFullCode());
+    guest.value = result;
   } catch (err) {
     error.value =
-      err instanceof Error ? err.message : 'Erro ao verificar codigo. Tente novamente.'
+      err instanceof Error
+        ? err.message
+        : "Erro ao verificar codigo. Tente novamente.";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const confirmPresence = async (): Promise<void> => {
-  if (!guest.value) return
+  if (!guest.value) return;
 
-  confirming.value = true
-  error.value = ''
+  confirming.value = true;
+  error.value = "";
 
   try {
-    const result = await rsvpService.confirmPresence(getFullCode())
-    confirmationMessage.value = result.message
-    confirmed.value = true
+    const result = await rsvpService.confirmPresence(getFullCode());
+    confirmationMessage.value = result.message;
+    confirmed.value = true;
 
-    await generateQRCode()
+    await generateQRCode();
   } catch (err) {
     error.value =
-      err instanceof Error ? err.message : 'Erro ao confirmar presenca. Tente novamente.'
+      err instanceof Error
+        ? err.message
+        : "Erro ao confirmar presenca. Tente novamente.";
   } finally {
-    confirming.value = false
+    confirming.value = false;
   }
-}
+};
 
 // QR Code Methods
 const generateQRCode = async (): Promise<void> => {
-  qrCodeLoading.value = true
+  qrCodeLoading.value = true;
   try {
-    qrCodeDataUrl.value = await qrcodeService.generateWeddingQRCode(getFullCode())
+    qrCodeDataUrl.value =
+      await qrcodeService.generateWeddingQRCode(getFullCode());
   } catch (err) {
-    console.error('Erro ao gerar QR Code:', err)
+    console.error("Erro ao gerar QR Code:", err);
   } finally {
-    qrCodeLoading.value = false
+    qrCodeLoading.value = false;
   }
-}
+};
 
 const downloadQRCode = (): void => {
   if (qrCodeDataUrl.value) {
-    const guestName = guest.value?.nome || 'convidado'
-    qrcodeService.downloadQRCode(qrCodeDataUrl.value, `qrcode-${guestName}.png`)
+    const guestName = guest.value?.nome || "convidado";
+    qrcodeService.downloadQRCode(
+      qrCodeDataUrl.value,
+      `qrcode-${guestName}.png`,
+    );
   }
-}
+};
 
 const sendQRCodeByEmail = async (): Promise<void> => {
   if (!guestEmail.value.trim()) {
-    emailError.value = 'Digite um email valido'
-    return
+    emailError.value = "Digite um email valido";
+    return;
   }
 
-  emailSending.value = true
-  emailError.value = ''
+  emailSending.value = true;
+  emailError.value = "";
 
   try {
     await rsvpService.sendQRCodeEmail({
       code: getFullCode(),
       email: guestEmail.value,
-      name: guest.value?.nome || 'Convidado',
-    })
-    emailSent.value = true
+      name: guest.value?.nome || "Convidado",
+    });
+    emailSent.value = true;
+    notification.success("E-mail enviado com sucesso.", 3000);
   } catch (err) {
-    emailError.value = err instanceof Error ? err.message : 'Erro ao enviar email'
+    emailError.value =
+      err instanceof Error ? err.message : "Erro ao enviar email";
+    notification.error("Erro ao enviar e-mail.", 3000);
   } finally {
-    emailSending.value = false
+    emailSending.value = false;
   }
-}
+};
 
 const cancelPresence = async (): Promise<void> => {
-  if (!guest.value) return
+  if (!guest.value) return;
 
-  cancelling.value = true
-  error.value = ''
+  cancelling.value = true;
+  error.value = "";
 
   try {
-    await rsvpService.cancelPresence(getFullCode())
-    showCancelModal.value = false
-    guest.value.confirmado = false
+    await rsvpService.cancelPresence(getFullCode());
+    showCancelModal.value = false;
+    guest.value.confirmado = false;
   } catch (err) {
     error.value =
-      err instanceof Error ? err.message : 'Erro ao cancelar presenca. Tente novamente.'
-    showCancelModal.value = false
+      err instanceof Error
+        ? err.message
+        : "Erro ao cancelar presenca. Tente novamente.";
+    showCancelModal.value = false;
   } finally {
-    cancelling.value = false
+    cancelling.value = false;
   }
-}
+};
 
 const declinePresence = async (): Promise<void> => {
-  if (!guest.value) return
+  if (!guest.value) return;
 
-  cancelling.value = true
-  error.value = ''
+  cancelling.value = true;
+  error.value = "";
 
   try {
-    await rsvpService.cancelPresence(getFullCode())
-    showDeclineModal.value = false
-    declined.value = true
+    await rsvpService.cancelPresence(getFullCode());
+    showDeclineModal.value = false;
+    declined.value = true;
   } catch (err) {
     error.value =
-      err instanceof Error ? err.message : 'Erro ao registrar ausencia. Tente novamente.'
-    showDeclineModal.value = false
+      err instanceof Error
+        ? err.message
+        : "Erro ao registrar ausencia. Tente novamente.";
+    showDeclineModal.value = false;
   } finally {
-    cancelling.value = false
+    cancelling.value = false;
   }
-}
+};
 
 const reset = (): void => {
-  code.value = ''
-  guest.value = null
-  confirmed.value = false
-  declined.value = false
-  error.value = ''
-  confirmationMessage.value = ''
-  showCancelModal.value = false
-  showDeclineModal.value = false
-}
+  code.value = "";
+  guest.value = null;
+  confirmed.value = false;
+  declined.value = false;
+  error.value = "";
+  confirmationMessage.value = "";
+  showCancelModal.value = false;
+  showDeclineModal.value = false;
+};
 </script>
 
 <style scoped>
@@ -477,7 +508,7 @@ const reset = (): void => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #FFF9F0 0%, #F5E6D3 100%);
+  background: linear-gradient(135deg, #fff9f0 0%, #f5e6d3 100%);
   padding: 2rem 1rem;
 }
 
@@ -506,7 +537,7 @@ const reset = (): void => {
 
 .rsvp-header__subtitle {
   font-size: 1.1rem;
-  color: #8B7355;
+  color: #8b7355;
   margin: 0;
   font-style: italic;
 }
@@ -536,15 +567,15 @@ const reset = (): void => {
 .rsvp-form__input-wrapper {
   display: flex;
   align-items: center;
-  border: 2px solid #E8DCC8;
+  border: 2px solid #e8dcc8;
   border-radius: 0.5rem;
-  background: #FFF9F0;
+  background: #fff9f0;
   overflow: hidden;
   transition: border-color 0.2s;
 }
 
 .rsvp-form__input-wrapper:focus-within {
-  border-color: #D4A574;
+  border-color: #d4a574;
 }
 
 .rsvp-form__prefix {
@@ -552,7 +583,7 @@ const reset = (): void => {
   font-size: 1.1rem;
   font-weight: 600;
   color: #3d2b1f;
-  background: #E8DCC8;
+  background: #e8dcc8;
   user-select: none;
 }
 
@@ -562,9 +593,9 @@ const reset = (): void => {
   font-size: 1.1rem;
   text-align: center;
   text-transform: uppercase;
-  border: 2px solid #E8DCC8;
+  border: 2px solid #e8dcc8;
   border-radius: 0.5rem;
-  background: #FFF9F0;
+  background: #fff9f0;
   color: #3d2b1f;
   transition: border-color 0.2s;
   box-sizing: border-box;
@@ -583,12 +614,12 @@ const reset = (): void => {
 
 .rsvp-form__input:focus {
   outline: none;
-  border-color: #D4A574;
+  border-color: #d4a574;
 }
 
 .rsvp-form__input::placeholder {
   text-transform: none;
-  color: #8B7355;
+  color: #8b7355;
 }
 
 .rsvp-form__button {
@@ -597,7 +628,7 @@ const reset = (): void => {
   font-size: 1rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #8B3A3A 0%, #C45C5C 100%);
+  background: linear-gradient(135deg, #8b3a3a 0%, #c45c5c 100%);
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -617,8 +648,8 @@ const reset = (): void => {
 .rsvp-form__error {
   margin: 1rem 0 0;
   padding: 0.75rem;
-  background: #FEE2E2;
-  color: #991B1B;
+  background: #fee2e2;
+  color: #991b1b;
   border-radius: 0.5rem;
   text-align: center;
   font-size: 0.9rem;
@@ -645,7 +676,7 @@ const reset = (): void => {
 }
 
 .rsvp-guest__details {
-  background: #FFF9F0;
+  background: #fff9f0;
   border-radius: 0.5rem;
   padding: 1rem;
   margin-bottom: 1.5rem;
@@ -655,7 +686,7 @@ const reset = (): void => {
   display: flex;
   justify-content: space-between;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #E8DCC8;
+  border-bottom: 1px solid #e8dcc8;
 }
 
 .rsvp-guest__detail:last-child {
@@ -663,7 +694,7 @@ const reset = (): void => {
 }
 
 .rsvp-guest__label {
-  color: #8B7355;
+  color: #8b7355;
   font-size: 0.9rem;
 }
 
@@ -673,7 +704,7 @@ const reset = (): void => {
 }
 
 .rsvp-guest__already-confirmed {
-  background: #D1FAE5;
+  background: #d1fae5;
   border-radius: 0.5rem;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -685,13 +716,13 @@ const reset = (): void => {
 
 .rsvp-guest__already-confirmed p {
   margin: 0.5rem 0 0;
-  color: #065F46;
+  color: #065f46;
 }
 
 .rsvp-guest__cancel-link {
   background: none;
   border: none;
-  color: #991B1B;
+  color: #991b1b;
   cursor: pointer;
   font-size: 0.85rem;
   margin-top: 0.75rem;
@@ -701,7 +732,7 @@ const reset = (): void => {
 }
 
 .rsvp-guest__cancel-link:hover {
-  color: #7F1D1D;
+  color: #7f1d1d;
 }
 
 .rsvp-guest__confirm-text {
@@ -721,7 +752,7 @@ const reset = (): void => {
   font-size: 1rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #2a9d8f 0%, #40E0D0 100%);
+  background: linear-gradient(135deg, #2a9d8f 0%, #40e0d0 100%);
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -743,16 +774,16 @@ const reset = (): void => {
   padding: 0.875rem;
   font-size: 0.95rem;
   font-weight: 500;
-  color: #8B7355;
-  background: #FFF9F0;
-  border: 2px solid #E8DCC8;
+  color: #8b7355;
+  background: #fff9f0;
+  border: 2px solid #e8dcc8;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .rsvp-guest__decline-button:hover:not(:disabled) {
-  background: #E8DCC8;
+  background: #e8dcc8;
   color: #5a4a3a;
 }
 
@@ -764,7 +795,7 @@ const reset = (): void => {
 .rsvp-guest__back {
   background: none;
   border: none;
-  color: #8B7355;
+  color: #8b7355;
   cursor: pointer;
   font-size: 0.9rem;
   padding: 0.5rem;
@@ -801,7 +832,7 @@ const reset = (): void => {
 }
 
 .rsvp-success__see-you {
-  color: #8B7355;
+  color: #8b7355;
   margin: 0 0 0.5rem;
   font-style: italic;
 }
@@ -822,16 +853,16 @@ const reset = (): void => {
 .rsvp-success__button {
   padding: 0.75rem 1.5rem;
   font-size: 0.95rem;
-  color: #8B7355;
-  background: #FFF9F0;
-  border: 2px solid #E8DCC8;
+  color: #8b7355;
+  background: #fff9f0;
+  border: 2px solid #e8dcc8;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .rsvp-success__button:hover {
-  background: #E8DCC8;
+  background: #e8dcc8;
 }
 
 .rsvp-success__link {
@@ -839,7 +870,7 @@ const reset = (): void => {
   font-size: 0.95rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #8B3A3A 0%, #C45C5C 100%);
+  background: linear-gradient(135deg, #8b3a3a 0%, #c45c5c 100%);
   border-radius: 0.5rem;
   text-decoration: none;
   transition: all 0.2s;
@@ -852,11 +883,11 @@ const reset = (): void => {
 
 /* QR Code */
 .rsvp-qrcode {
-  background: #FFF9F0;
+  background: #fff9f0;
   border-radius: 0.75rem;
   padding: 1.5rem;
   margin: 1.5rem 0;
-  border: 2px dashed #E8DCC8;
+  border: 2px dashed #e8dcc8;
 }
 
 .rsvp-qrcode__title {
@@ -868,7 +899,7 @@ const reset = (): void => {
 
 .rsvp-qrcode__subtitle {
   font-size: 0.85rem;
-  color: #8B7355;
+  color: #8b7355;
   margin: 0 0 1rem;
   text-align: center;
 }
@@ -876,7 +907,7 @@ const reset = (): void => {
 .rsvp-qrcode__loading {
   text-align: center;
   padding: 2rem;
-  color: #8B7355;
+  color: #8b7355;
 }
 
 .rsvp-qrcode__image-container {
@@ -913,7 +944,7 @@ const reset = (): void => {
   font-size: 0.95rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #2a9d8f 0%, #40E0D0 100%);
+  background: linear-gradient(135deg, #2a9d8f 0%, #40e0d0 100%);
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -931,7 +962,7 @@ const reset = (): void => {
 }
 
 .rsvp-qrcode__email {
-  border-top: 1px solid #E8DCC8;
+  border-top: 1px solid #e8dcc8;
   padding-top: 1rem;
 }
 
@@ -951,7 +982,7 @@ const reset = (): void => {
   flex: 1;
   padding: 0.75rem;
   font-size: 0.95rem;
-  border: 2px solid #E8DCC8;
+  border: 2px solid #e8dcc8;
   border-radius: 0.5rem;
   background: white;
   color: #3d2b1f;
@@ -959,7 +990,7 @@ const reset = (): void => {
 
 .rsvp-qrcode__email-input:focus {
   outline: none;
-  border-color: #D4A574;
+  border-color: #d4a574;
 }
 
 .rsvp-qrcode__email-btn {
@@ -967,7 +998,7 @@ const reset = (): void => {
   font-size: 0.9rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #8B3A3A 0%, #C45C5C 100%);
+  background: linear-gradient(135deg, #8b3a3a 0%, #c45c5c 100%);
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -987,8 +1018,8 @@ const reset = (): void => {
 .rsvp-qrcode__email-error {
   margin: 0.5rem 0 0;
   padding: 0.5rem;
-  background: #FEE2E2;
-  color: #991B1B;
+  background: #fee2e2;
+  color: #991b1b;
   border-radius: 0.25rem;
   font-size: 0.85rem;
   text-align: center;
@@ -997,11 +1028,11 @@ const reset = (): void => {
 .rsvp-qrcode__email-success {
   text-align: center;
   padding: 0.75rem;
-  background: #D1FAE5;
-  color: #065F46;
+  background: #d1fae5;
+  color: #065f46;
   border-radius: 0.5rem;
   font-size: 0.9rem;
-  border-top: 1px solid #E8DCC8;
+  border-top: 1px solid #e8dcc8;
   margin-top: 1rem;
 }
 
@@ -1021,7 +1052,7 @@ const reset = (): void => {
 
 .rsvp-declined__title {
   font-size: 1.5rem;
-  color: #8B7355;
+  color: #8b7355;
   margin: 0 0 1rem;
 }
 
@@ -1032,7 +1063,7 @@ const reset = (): void => {
 }
 
 .rsvp-declined__note {
-  color: #8B7355;
+  color: #8b7355;
   margin: 0 0 2rem;
   font-size: 0.95rem;
   font-style: italic;
@@ -1047,16 +1078,16 @@ const reset = (): void => {
 .rsvp-declined__button {
   padding: 0.75rem 1.5rem;
   font-size: 0.95rem;
-  color: #8B7355;
-  background: #FFF9F0;
-  border: 2px solid #E8DCC8;
+  color: #8b7355;
+  background: #fff9f0;
+  border: 2px solid #e8dcc8;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .rsvp-declined__button:hover {
-  background: #E8DCC8;
+  background: #e8dcc8;
 }
 
 .rsvp-declined__link {
@@ -1064,7 +1095,7 @@ const reset = (): void => {
   font-size: 0.95rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #8B3A3A 0%, #C45C5C 100%);
+  background: linear-gradient(135deg, #8b3a3a 0%, #c45c5c 100%);
   border-radius: 0.5rem;
   text-decoration: none;
   transition: all 0.2s;
@@ -1082,7 +1113,7 @@ const reset = (): void => {
 }
 
 .rsvp-footer__link {
-  color: #8B7355;
+  color: #8b7355;
   text-decoration: none;
   font-size: 0.95rem;
   transition: color 0.2s;
@@ -1148,8 +1179,8 @@ const reset = (): void => {
 }
 
 .rsvp-modal__warning {
-  color: #991B1B;
-  background: #FEE2E2;
+  color: #991b1b;
+  background: #fee2e2;
   padding: 0.75rem;
   border-radius: 0.5rem;
   margin: 0 0 1.5rem;
@@ -1159,7 +1190,7 @@ const reset = (): void => {
 
 .rsvp-modal__info {
   color: #5a4a3a;
-  background: #FFF9F0;
+  background: #fff9f0;
   padding: 0.75rem;
   border-radius: 0.5rem;
   margin: 0 0 1.5rem;
@@ -1184,17 +1215,17 @@ const reset = (): void => {
 }
 
 .rsvp-modal__button--secondary {
-  background: #FFF9F0;
-  color: #8B7355;
-  border: 2px solid #E8DCC8;
+  background: #fff9f0;
+  color: #8b7355;
+  border: 2px solid #e8dcc8;
 }
 
 .rsvp-modal__button--secondary:hover:not(:disabled) {
-  background: #E8DCC8;
+  background: #e8dcc8;
 }
 
 .rsvp-modal__button--danger {
-  background: linear-gradient(135deg, #991B1B 0%, #DC2626 100%);
+  background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
   color: white;
 }
 
