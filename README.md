@@ -4,18 +4,6 @@ Sistema moderno e profissional de lista de casamento desenvolvido com Vue.js 3, 
 
 ## 🎯 Funcionalidades
 
-- **Gestão de Presentes**
-  - Listagem com categorias dinâmicas
-  - Filtros por categoria
-  - Cards responsivos e animados
-  - Status de disponibilidade em tempo real
-
-- **Sistema de Reserva**
-  - Modal elegante com validação
-  - Formulário com campos opcionais/obrigatórios
-  - Loading states e error handling
-  - Sanitização de dados
-
 - **Contribuição via PIX**
   - Exibição de chave PIX
   - Botão copiar com feedback
@@ -29,6 +17,7 @@ Sistema moderno e profissional de lista de casamento desenvolvido com Vue.js 3, 
 ## 🚀 Tecnologias
 
 ### Core
+
 - **Vue.js 3.4** - Framework progressivo
 - **Composition API** - API moderna e reativa
 - **Pinia 2.1** - State management oficial
@@ -36,6 +25,7 @@ Sistema moderno e profissional de lista de casamento desenvolvido com Vue.js 3, 
 - **Vite 5** - Build tool ultrarrápido
 
 ### Padrões Aplicados
+
 - ✅ Composition API (setup script)
 - ✅ Composables para lógica reutilizável
 - ✅ Single File Components (.vue)
@@ -130,13 +120,13 @@ Edite o arquivo `src/utils/constants.js`:
 
 ```javascript
 export const APP_CONFIG = {
-  APP_NAME: 'Lista de Casamento',
-  BRIDE_NAME: 'Gabi',
-  GROOM_NAME: 'João',
-  WEDDING_DATE: '2025-06-15',
-  PIX_KEY: '11999999999',
+  APP_NAME: "Lista de Casamento",
+  BRIDE_NAME: "Gabi",
+  GROOM_NAME: "João",
+  WEDDING_DATE: "2025-06-15",
+  PIX_KEY: "11999999999",
   // ...
-}
+};
 ```
 
 ### Cores e Estilos
@@ -182,40 +172,40 @@ O projeto é totalmente responsivo com breakpoints:
 
 ```javascript
 // useModal.js - Gerenciamento de modais
-const modal = useModal()
-modal.open(data)
-modal.close()
+const modal = useModal();
+modal.open(data);
+modal.close();
 
 // useNotification.js - Sistema de notificações
-const { success, error } = useNotification()
-success('Operação concluída!')
+const { success, error } = useNotification();
+success("Operação concluída!");
 ```
 
 ### Pinia Store
 
 ```javascript
-const giftStore = useGiftStore()
+const giftStore = useGiftStore();
 
 // State
-giftStore.gifts
-giftStore.loading
+giftStore.gifts;
+giftStore.loading;
 
 // Getters
-giftStore.filteredGifts
-giftStore.stats
+giftStore.filteredGifts;
+giftStore.stats;
 
 // Actions
-await giftStore.loadGifts()
-await giftStore.reserveGift(id, data)
+await giftStore.loadGifts();
+await giftStore.reserveGift(id, data);
 ```
 
 ### Helpers
 
 ```javascript
-import { formatCurrency, copyToClipboard } from '@/utils/helpers'
+import { formatCurrency, copyToClipboard } from "@/utils/helpers";
 
-formatCurrency(150.50) // R$ 150,50
-await copyToClipboard('texto')
+formatCurrency(150.5); // R$ 150,50
+await copyToClipboard("texto");
 ```
 
 ## 🔒 Segurança
