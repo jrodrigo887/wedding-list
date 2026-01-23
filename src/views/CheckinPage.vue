@@ -227,11 +227,12 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
 import { APP_CONFIG } from '@/utils/constants'
 import rsvpService from '@/services/rsvp.service'
 import { Html5Qrcode } from 'html5-qrcode'
+import type { Guest } from '@/types'
 
 // Auth state
 const authenticated = ref(false)
@@ -240,31 +241,31 @@ const authError = ref('')
 
 // Check-in state
 const code = ref('')
-const guest = ref(null)
+const guest = ref<Guest | null>(null)
 const loading = ref(false)
 const checkingIn = ref(false)
 const error = ref('')
 const checkinSuccess = ref(false)
 const lastCheckedInGuest = ref('')
 const checkedInCount = ref(0)
-const codeInput = ref(null)
+const codeInput = ref<HTMLInputElement | null>(null)
 
 // Scanner state
 const showScanner = ref(false)
 const scanning = ref(false)
 const scannerStatus = ref('')
 const scannedCode = ref('')
-let html5QrCode = null
+let html5QrCode: Html5Qrcode | null = null
 
 // Computed
 const totalPeople = computed(() => {
   if (!guest.value) return 0
   const hasParceiro = guest.value.parceiro ? 1 : 0
-  return 1 + hasParceiro + (parseInt(guest.value.acompanhantes) || 0)
+  return 1 + hasParceiro + (Number(guest.value.acompanhantes) || 0)
 })
 
 // Methods
-const validatePin = () => {
+const validatePin = (): void => {
   const correctPin = import.meta.env.VITE_CHECKIN_PIN
 
   if (pin.value === correctPin) {
@@ -278,15 +279,16 @@ const validatePin = () => {
   }
 }
 
-const onCodeInput = (event) => {
-  code.value = event.target.value.replace(/\D/g, '')
+const onCodeInput = (event: Event): void => {
+  const target = event.target as HTMLInputElement
+  code.value = target.value.replace(/\D/g, '')
 }
 
-const getFullCode = () => {
+const getFullCode = (): string => {
   return 'RE' + code.value.trim()
 }
 
-const checkGuest = async () => {
+const checkGuest = async (): Promise<void> => {
   if (!code.value.trim()) return
 
   loading.value = true
@@ -295,18 +297,16 @@ const checkGuest = async () => {
   checkinSuccess.value = false
 
   try {
-    console.log(getFullCode());
-    
     const result = await rsvpService.checkGuestCode(getFullCode())
     guest.value = result
   } catch (err) {
-    error.value = err.message || 'Codigo nao encontrado'
+    error.value = err instanceof Error ? err.message : 'Codigo nao encontrado'
   } finally {
     loading.value = false
   }
 }
 
-const performCheckin = async () => {
+const performCheckin = async (): Promise<void> => {
   if (!guest.value) return
 
   checkingIn.value = true
@@ -314,18 +314,19 @@ const performCheckin = async () => {
 
   try {
     await rsvpService.registerCheckin(getFullCode())
-    lastCheckedInGuest.value = guest.value.nome + (guest.value.parceiro ? ` e ${guest.value.parceiro}` : '')
+    lastCheckedInGuest.value =
+      guest.value.nome + (guest.value.parceiro ? ` e ${guest.value.parceiro}` : '')
     checkedInCount.value++
     checkinSuccess.value = true
     guest.value = null
   } catch (err) {
-    error.value = err.message || 'Erro ao registrar check-in'
+    error.value = err instanceof Error ? err.message : 'Erro ao registrar check-in'
   } finally {
     checkingIn.value = false
   }
 }
 
-const resetGuest = () => {
+const resetGuest = (): void => {
   guest.value = null
   code.value = ''
   error.value = ''
@@ -335,11 +336,11 @@ const resetGuest = () => {
   })
 }
 
-const resetAll = () => {
+const resetAll = (): void => {
   resetGuest()
 }
 
-const logout = () => {
+const logout = (): void => {
   authenticated.value = false
   pin.value = ''
   resetGuest()
@@ -347,7 +348,7 @@ const logout = () => {
 }
 
 // Scanner Methods
-const openScanner = async () => {
+const openScanner = async (): Promise<void> => {
   showScanner.value = true
   scannedCode.value = ''
   scannerStatus.value = 'Iniciando camera...'
@@ -381,19 +382,16 @@ const openScanner = async () => {
   }
 }
 
-const onQrCodeSuccess = (decodedText) => {
-  // Para o scanner apos detectar
+const onQrCodeSuccess = (decodedText: string): void => {
   scanning.value = false
   scannerStatus.value = ''
 
-  // Extrai o codigo do QR Code
   const extractedCode = extractCodeFromQR(decodedText)
 
   if (extractedCode) {
     scannedCode.value = extractedCode
   } else {
     error.value = 'QR Code invalido. Certifique-se de usar o QR Code do convite.'
-    // Reinicia o scanner apos 2 segundos
     setTimeout(() => {
       error.value = ''
       scanning.value = true
@@ -401,26 +399,22 @@ const onQrCodeSuccess = (decodedText) => {
   }
 }
 
-const onQrCodeError = () => {
-  // Silenciamente ignora erros de leitura (normal quando nao ha QR code na tela)
+const onQrCodeError = (): void => {
+  // Silenciamente ignora erros de leitura
 }
 
-const extractCodeFromQR = (text) => {
-  // O QR Code pode conter apenas o codigo (RE01) ou uma URL
+const extractCodeFromQR = (text: string): string | null => {
   const cleanText = text.trim().toUpperCase()
 
-  // Procura por padrao RE seguido de numeros/letras
   const match = cleanText.match(/RE\s*[-:]?\s*([0-9A-Z]{1,10})/i)
   if (match) {
-    return match[0] // Retorna o codigo completo (RE01)
+    return match[0]
   }
 
-  // Se o texto e apenas o codigo RE seguido de algo
   if (cleanText.startsWith('RE')) {
     return cleanText
   }
 
-  // Se e apenas numeros, adiciona RE
   if (/^\d{1,4}$/.test(cleanText)) {
     return 'RE' + cleanText
   }
@@ -428,14 +422,14 @@ const extractCodeFromQR = (text) => {
   return null
 }
 
-const closeScanner = async () => {
+const closeScanner = async (): Promise<void> => {
   await stopScanner()
   showScanner.value = false
   scannedCode.value = ''
   scannerStatus.value = ''
 }
 
-const stopScanner = async () => {
+const stopScanner = async (): Promise<void> => {
   if (html5QrCode) {
     try {
       await html5QrCode.stop()
@@ -448,20 +442,18 @@ const stopScanner = async () => {
   scanning.value = false
 }
 
-const useScannedCode = async () => {
+const useScannedCode = async (): Promise<void> => {
   if (scannedCode.value) {
-    // Extrai apenas os numeros do codigo para o input
     const numericPart = scannedCode.value.replace(/^RE/i, '')
     code.value = numericPart
     await closeScanner()
-    // Auto-busca o convidado
     nextTick(() => {
       checkGuest()
     })
   }
 }
 
-const retryScanner = async () => {
+const retryScanner = async (): Promise<void> => {
   scannedCode.value = ''
   error.value = ''
 
@@ -475,7 +467,6 @@ const retryScanner = async () => {
   }
 }
 
-// Cleanup ao desmontar componente
 onBeforeUnmount(() => {
   stopScanner()
 })

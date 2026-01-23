@@ -1,5 +1,5 @@
 // ========================================
-// 🎯 CONFIGURAÇÕES CENTRALIZADAS
+// CONFIGURACOES CENTRALIZADAS
 // ========================================
 
 export const APP_CONFIG = {
@@ -12,30 +12,34 @@ export const APP_CONFIG = {
   API_TIMEOUT: 10000,
   NOTIFICATION_DURATION: 3000,
   BENEFICIARY_NAME: 'João Rodrigo Filipe da Silva',
- }
+} as const
 
 export const API_ENDPOINTS = {
   GIFTS: '/gifts',
   RESERVE: '/gifts/:id/reserve',
   CATEGORIES: '/categories',
-}
+} as const
 
 export const GIFT_STATUS = {
   AVAILABLE: 'available',
   RESERVED: 'reserved',
-}
+} as const
+
+export type GiftStatus = (typeof GIFT_STATUS)[keyof typeof GIFT_STATUS]
 
 export const NOTIFICATION_TYPES = {
   SUCCESS: 'success',
   ERROR: 'error',
   WARNING: 'warning',
   INFO: 'info',
-}
+} as const
+
+export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES]
 
 export const MESSAGES = {
   SUCCESS: {
-    RESERVE: 'Presente reservado com sucesso! 🎉',
-    COPY: 'Chave PIX copiada! 📋',
+    RESERVE: 'Presente reservado com sucesso!',
+    COPY: 'Chave PIX copiada!',
   },
   ERROR: {
     RESERVE: 'Erro ao reservar presente. Tente novamente.',
@@ -49,20 +53,20 @@ export const MESSAGES = {
   INFO: {
     LOADING: 'Carregando presentes...',
   },
-}
+} as const
 
 export const BREAKPOINTS = {
   MOBILE: 640,
   TABLET: 768,
   DESKTOP: 1024,
   WIDE: 1280,
-}
+} as const
 
 export const ANIMATION_DURATION = {
   FAST: 150,
   NORMAL: 300,
   SLOW: 500,
-}
+} as const
 
 export const VALIDATION_RULES = {
   NAME: {
@@ -76,4 +80,4 @@ export const VALIDATION_RULES = {
   PHONE: {
     PATTERN: /^(\+55\s?)?\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/,
   },
-}
+} as const

@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 // Views
 import HomePage from '@/views/HomePage.vue'
@@ -6,7 +6,7 @@ import RsvpPage from '@/views/RsvpPage.vue'
 import ChaCasaNovaPage from '@/views/ChaCasaNovaPage.vue'
 import CheckinPage from '@/views/CheckinPage.vue'
 
-const routes = [
+const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
@@ -27,7 +27,6 @@ const routes = [
     name: 'checkin',
     component: CheckinPage,
   },
-  // Redirect para pagina inicial se rota nao existir
   {
     path: '/:pathMatch(.*)*',
     redirect: '/',

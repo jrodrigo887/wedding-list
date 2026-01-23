@@ -38,7 +38,7 @@
                   :value="pixKey"
                   readonly
                   class="flex-1 px-4 py-3 text-sm font-mono font-semibold text-gray-700 bg-amber-50 border-2 border-amber-200 rounded-xl text-center focus:outline-none focus:border-amber-400"
-                  @focus="$event.target.select()"
+                  @focus="($event.target as HTMLInputElement)?.select()"
                 />
                 <BaseButton
                   variant="primary"
@@ -62,7 +62,7 @@
   </Teleport>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useNotification } from '@/composables/useNotification'
@@ -70,33 +70,30 @@ import { copyToClipboard } from '@/utils/helpers'
 import { APP_CONFIG, MESSAGES } from '@/utils/constants'
 import qrcodePix from '@/assets/qrcode-pix.png'
 
-// Props
-defineProps({
-  isOpen: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  isOpen?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  isOpen: false,
 })
 
-// Emits
-const emit = defineEmits(['close'])
+const emit = defineEmits<{
+  close: []
+}>()
 
-// Composables
 const { success } = useNotification()
 
-// State
 const copied = ref(false)
 
-// Computed
 const pixKey = computed(() => APP_CONFIG.PIX_KEY)
 const beneficiaryName = computed(() => APP_CONFIG.BENEFICIARY_NAME)
 
-// Methods
-const close = () => {
+const close = (): void => {
   emit('close')
 }
 
-const handleCopyPix = async () => {
+const handleCopyPix = async (): Promise<void> => {
   try {
     const result = await copyToClipboard(pixKey.value)
     if (result) {

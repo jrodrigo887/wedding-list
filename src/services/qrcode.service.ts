@@ -3,6 +3,17 @@
 // ========================================
 
 import QRCode from 'qrcode'
+import type { QRCodeOptions } from '@/types'
+
+interface QRCodeInternalOptions {
+  width: number
+  margin: number
+  color: {
+    dark: string
+    light: string
+  }
+  errorCorrectionLevel: 'L' | 'M' | 'Q' | 'H'
+}
 
 /**
  * Servico para gerar QR Codes para check-in
@@ -10,20 +21,16 @@ import QRCode from 'qrcode'
 export const qrcodeService = {
   /**
    * Gera um QR Code como Data URL (base64)
-   * @param {string} code - Codigo do convidado (ex: RE01)
-   * @param {Object} options - Opcoes de customizacao
-   * @returns {Promise<string>} - Data URL do QR Code
    */
-  async generateQRCode(code, options = {}) {
-    const defaultOptions = {
-      width: 300,
-      margin: 2,
+  async generateQRCode(code: string, options: QRCodeOptions = {}): Promise<string> {
+    const defaultOptions: QRCodeInternalOptions = {
+      width: options.width ?? 300,
+      margin: options.margin ?? 2,
       color: {
-        dark: '#000000',
-        light: '#ffffff',
+        dark: options.color?.dark ?? '#000000',
+        light: options.color?.light ?? '#ffffff',
       },
-      errorCorrectionLevel: 'H', // Alto nivel de correcao de erro
-      ...options,
+      errorCorrectionLevel: options.errorCorrectionLevel ?? 'H',
     }
 
     try {
@@ -37,21 +44,20 @@ export const qrcodeService = {
 
   /**
    * Gera um QR Code e retorna como canvas element
-   * @param {string} code - Codigo do convidado
-   * @param {HTMLCanvasElement} canvas - Elemento canvas
-   * @param {Object} options - Opcoes de customizacao
-   * @returns {Promise<void>}
    */
-  async generateToCanvas(code, canvas, options = {}) {
-    const defaultOptions = {
-      width: 300,
-      margin: 2,
+  async generateToCanvas(
+    code: string,
+    canvas: HTMLCanvasElement,
+    options: QRCodeOptions = {}
+  ): Promise<void> {
+    const defaultOptions: QRCodeInternalOptions = {
+      width: options.width ?? 300,
+      margin: options.margin ?? 2,
       color: {
-        dark: '#000000',
-        light: '#ffffff',
+        dark: options.color?.dark ?? '#000000',
+        light: options.color?.light ?? '#ffffff',
       },
-      errorCorrectionLevel: 'H',
-      ...options,
+      errorCorrectionLevel: options.errorCorrectionLevel ?? 'H',
     }
 
     try {
@@ -64,15 +70,13 @@ export const qrcodeService = {
 
   /**
    * Gera QR Code com estilo customizado para o casamento
-   * @param {string} code - Codigo do convidado
-   * @returns {Promise<string>} - Data URL do QR Code
    */
-  async generateWeddingQRCode(code) {
+  async generateWeddingQRCode(code: string): Promise<string> {
     return this.generateQRCode(code, {
       width: 400,
       margin: 3,
       color: {
-        dark: '#3d2b1f', // Cor marrom do tema
+        dark: '#3d2b1f',
         light: '#ffffff',
       },
       errorCorrectionLevel: 'H',
@@ -81,10 +85,8 @@ export const qrcodeService = {
 
   /**
    * Faz download do QR Code como imagem
-   * @param {string} dataUrl - Data URL do QR Code
-   * @param {string} filename - Nome do arquivo
    */
-  downloadQRCode(dataUrl, filename = 'qrcode-checkin.png') {
+  downloadQRCode(dataUrl: string, filename = 'qrcode-checkin.png'): void {
     const link = document.createElement('a')
     link.href = dataUrl
     link.download = filename

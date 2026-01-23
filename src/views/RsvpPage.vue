@@ -287,15 +287,16 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { APP_CONFIG } from '@/utils/constants'
 import rsvpService from '@/services/rsvp.service'
 import qrcodeService from '@/services/qrcode.service'
+import type { Guest } from '@/types'
 
 // State
 const code = ref('')
-const guest = ref(null)
+const guest = ref<Guest | null>(null)
 const loading = ref(false)
 const confirming = ref(false)
 const confirmed = ref(false)
@@ -318,7 +319,7 @@ const guestEmail = ref('')
 const totalPeople = computed(() => {
   if (!guest.value) return 0
   const hasParceiro = guest.value.parceiro ? 1 : 0
-  return 1 + hasParceiro + (parseInt(guest.value.acompanhantes) || 0)
+  return 1 + hasParceiro + (Number(guest.value.acompanhantes) || 0)
 })
 
 const formattedWeddingDate = computed(() => {
@@ -332,16 +333,16 @@ const formattedWeddingDate = computed(() => {
 })
 
 // Methods
-const onCodeInput = (event) => {
-  // Permite apenas dígitos
-  code.value = event.target.value.replace(/\D/g, '')
+const onCodeInput = (event: Event): void => {
+  const target = event.target as HTMLInputElement
+  code.value = target.value.replace(/\D/g, '')
 }
 
-const getFullCode = () => {
+const getFullCode = (): string => {
   return 'RE' + code.value.trim()
 }
 
-const checkCode = async () => {
+const checkCode = async (): Promise<void> => {
   if (!code.value.trim()) return
 
   loading.value = true
@@ -351,13 +352,14 @@ const checkCode = async () => {
     const result = await rsvpService.checkGuestCode(getFullCode())
     guest.value = result
   } catch (err) {
-    error.value = err.message || 'Erro ao verificar codigo. Tente novamente.'
+    error.value =
+      err instanceof Error ? err.message : 'Erro ao verificar codigo. Tente novamente.'
   } finally {
     loading.value = false
   }
 }
 
-const confirmPresence = async () => {
+const confirmPresence = async (): Promise<void> => {
   if (!guest.value) return
 
   confirming.value = true
@@ -368,21 +370,19 @@ const confirmPresence = async () => {
     confirmationMessage.value = result.message
     confirmed.value = true
 
-    console.log('gerar qrcode');
-    
     await generateQRCode()
   } catch (err) {
-    error.value = err.message || 'Erro ao confirmar presenca. Tente novamente.'
+    error.value =
+      err instanceof Error ? err.message : 'Erro ao confirmar presenca. Tente novamente.'
   } finally {
     confirming.value = false
   }
 }
 
 // QR Code Methods
-const generateQRCode = async () => {
+const generateQRCode = async (): Promise<void> => {
   qrCodeLoading.value = true
   try {
-    
     qrCodeDataUrl.value = await qrcodeService.generateWeddingQRCode(getFullCode())
   } catch (err) {
     console.error('Erro ao gerar QR Code:', err)
@@ -391,14 +391,14 @@ const generateQRCode = async () => {
   }
 }
 
-const downloadQRCode = () => {
+const downloadQRCode = (): void => {
   if (qrCodeDataUrl.value) {
     const guestName = guest.value?.nome || 'convidado'
     qrcodeService.downloadQRCode(qrCodeDataUrl.value, `qrcode-${guestName}.png`)
   }
 }
 
-const sendQRCodeByEmail = async () => {
+const sendQRCodeByEmail = async (): Promise<void> => {
   if (!guestEmail.value.trim()) {
     emailError.value = 'Digite um email valido'
     return
@@ -415,13 +415,13 @@ const sendQRCodeByEmail = async () => {
     })
     emailSent.value = true
   } catch (err) {
-    emailError.value = err.message || 'Erro ao enviar email'
+    emailError.value = err instanceof Error ? err.message : 'Erro ao enviar email'
   } finally {
     emailSending.value = false
   }
 }
 
-const cancelPresence = async () => {
+const cancelPresence = async (): Promise<void> => {
   if (!guest.value) return
 
   cancelling.value = true
@@ -432,14 +432,15 @@ const cancelPresence = async () => {
     showCancelModal.value = false
     guest.value.confirmado = false
   } catch (err) {
-    error.value = err.message || 'Erro ao cancelar presenca. Tente novamente.'
+    error.value =
+      err instanceof Error ? err.message : 'Erro ao cancelar presenca. Tente novamente.'
     showCancelModal.value = false
   } finally {
     cancelling.value = false
   }
 }
 
-const declinePresence = async () => {
+const declinePresence = async (): Promise<void> => {
   if (!guest.value) return
 
   cancelling.value = true
@@ -450,14 +451,15 @@ const declinePresence = async () => {
     showDeclineModal.value = false
     declined.value = true
   } catch (err) {
-    error.value = err.message || 'Erro ao registrar ausencia. Tente novamente.'
+    error.value =
+      err instanceof Error ? err.message : 'Erro ao registrar ausencia. Tente novamente.'
     showDeclineModal.value = false
   } finally {
     cancelling.value = false
   }
 }
 
-const reset = () => {
+const reset = (): void => {
   code.value = ''
   guest.value = null
   confirmed.value = false

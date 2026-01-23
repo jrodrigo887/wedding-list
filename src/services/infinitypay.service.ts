@@ -1,29 +1,45 @@
 // ========================================
 // INFINITY PAY SERVICE
-// Integração direta com API de Checkout do InfinityPay
+// Integracao direta com API de Checkout do InfinityPay
 // ========================================
 
-const INFINITYPAY_API_URL = 'https://api.infinitepay.io/invoices/public/checkout/links'
+import type {
+  Gift,
+  Customer,
+  InfinityPayConfig,
+  CheckoutResponse,
+  PendingTransaction,
+} from '@/types'
+
+const INFINITYPAY_API_URL =
+  'https://api.infinitepay.io/invoices/public/checkout/links'
 
 /**
- * Configuração do Infinity Pay
+ * Configuracao do Infinity Pay
  */
-const getConfig = () => ({
+const getConfig = (): InfinityPayConfig => ({
   handle: import.meta.env.VITE_INFINITYPAY_HANDLE || '',
-  redirectUrl: import.meta.env.VITE_INFINITYPAY_REDIRECT_URL || `${window.location.origin}?pagamento=confirmado`,
+  redirectUrl:
+    import.meta.env.VITE_INFINITYPAY_REDIRECT_URL ||
+    `${window.location.origin}?pagamento=confirmado`,
   webhookUrl: import.meta.env.VITE_INFINITYPAY_WEBHOOK_URL || '',
   googleScriptUrl: import.meta.env.VITE_GOOGLE_SCRIPT_URL || '',
 })
 
+interface ReservationData {
+  giftId: string | number
+  customer: Customer
+  orderNsu?: string
+}
+
 /**
- * Serviço de integração com Infinity Pay
+ * Servico de integracao com Infinity Pay
  */
 export const infinityPayService = {
   /**
-   * Verifica se o Infinity Pay está configurado
-   * @returns {boolean}
+   * Verifica se o Infinity Pay esta configurado
    */
-  isConfigured() {
+  isConfigured(): boolean {
     const config = getConfig()
     return !!config.handle
   },
@@ -31,26 +47,44 @@ export const infinityPayService = {
   /**
    * Gera um link de pagamento para um presente
    * Chama diretamente a API do InfinityPay
-   * @param {Object} gift - Dados do presente
-   * @param {Object} customer - Dados do cliente
-   * @returns {Promise<Object>} - URL do checkout e dados da transação
    */
-  async createCheckoutLink(gift, customer) {
+  async createCheckoutLink(
+    gift: Gift,
+    customer: Customer
+  ): Promise<CheckoutResponse> {
     const config = getConfig()
 
     if (!config.handle) {
-      throw new Error('Infinity Pay não configurado. Configure VITE_INFINITYPAY_HANDLE no .env')
+      throw new Error(
+        'Infinity Pay não configurado. Configure VITE_INFINITYPAY_HANDLE no .env'
+      )
     }
 
     const orderNsu = `gift_${gift.id}_${Date.now()}`
 
-    // Prepara o payload para a API do InfinityPay
-    const payload = {
+    interface CheckoutPayload {
+      handle: string
+      items: Array<{
+        quantity: number
+        price: number
+        description: string
+      }>
+      order_nsu: string
+      redirect_url: string
+      customer: {
+        name: string
+        email: string
+        phone_number?: string
+      }
+      webhook_url?: string
+    }
+
+    const payload: CheckoutPayload = {
       handle: config.handle,
       items: [
         {
           quantity: 1,
-          price: Math.round(gift.price * 100), // Converte para centavos
+          price: Math.round(gift.price * 100),
           description: `Presente de Casamento: ${gift.name}`,
         },
       ],
@@ -63,7 +97,6 @@ export const infinityPayService = {
       },
     }
 
-    // Adiciona webhook se configurado
     if (config.webhookUrl) {
       payload.webhook_url = config.webhookUrl
     }
@@ -81,7 +114,11 @@ export const infinityPayService = {
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('[InfinityPay] Erro na resposta:', response.status, errorText)
+        console.error(
+          '[InfinityPay] Erro na resposta:',
+          response.status,
+          errorText
+        )
         throw new Error(`Erro ao criar checkout: ${response.status}`)
       }
 
@@ -100,11 +137,11 @@ export const infinityPayService = {
   },
 
   /**
-   * Reserva o presente no Google Sheets após pagamento confirmado
-   * @param {Object} reservationData - Dados da reserva
-   * @returns {Promise<Object>}
+   * Reserva o presente no Google Sheets apos pagamento confirmado
    */
-  async confirmReservation(reservationData) {
+  async confirmReservation(
+    reservationData: ReservationData
+  ): Promise<{ success: boolean; error?: string }> {
     const config = getConfig()
 
     if (!config.googleScriptUrl) {
@@ -113,11 +150,14 @@ export const infinityPayService = {
 
     const formData = new FormData()
     formData.append('action', 'reserveGift')
-    formData.append('giftId', reservationData.giftId)
+    formData.append('giftId', String(reservationData.giftId))
     formData.append('nome', reservationData.customer.name)
     formData.append('email', reservationData.customer.email)
     formData.append('telefone', reservationData.customer.phone || '')
-    formData.append('mensagem', reservationData.customer.message || 'Pago via Infinity Pay')
+    formData.append(
+      'mensagem',
+      reservationData.customer.message || 'Pago via Infinity Pay'
+    )
     formData.append('pago', 'true')
     formData.append('transactionId', reservationData.orderNsu || '')
 
@@ -136,12 +176,11 @@ export const infinityPayService = {
   },
 
   /**
-   * Armazena dados da transação pendente no localStorage
-   * para recuperar após o redirecionamento
-   * @param {Object} transactionData
+   * Armazena dados da transacao pendente no localStorage
+   * para recuperar apos o redirecionamento
    */
-  savePendingTransaction(transactionData) {
-    const pending = {
+  savePendingTransaction(transactionData: Omit<PendingTransaction, 'createdAt'>): void {
+    const pending: PendingTransaction = {
       ...transactionData,
       createdAt: new Date().toISOString(),
     }
@@ -150,19 +189,17 @@ export const infinityPayService = {
   },
 
   /**
-   * Recupera dados da transação pendente
-   * @returns {Object|null}
+   * Recupera dados da transacao pendente
    */
-  getPendingTransaction() {
+  getPendingTransaction(): PendingTransaction | null {
     const data = localStorage.getItem('infinitypay_pending')
     if (!data) return null
 
-    const pending = JSON.parse(data)
+    const pending: PendingTransaction = JSON.parse(data)
 
-    // Expira após 1 hora
     const createdAt = new Date(pending.createdAt)
     const now = new Date()
-    const hoursDiff = (now - createdAt) / (1000 * 60 * 60)
+    const hoursDiff = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60)
 
     if (hoursDiff > 1) {
       this.clearPendingTransaction()
@@ -173,9 +210,9 @@ export const infinityPayService = {
   },
 
   /**
-   * Limpa a transação pendente
+   * Limpa a transacao pendente
    */
-  clearPendingTransaction() {
+  clearPendingTransaction(): void {
     localStorage.removeItem('infinitypay_pending')
     console.log('[InfinityPay] Transação pendente removida')
   },

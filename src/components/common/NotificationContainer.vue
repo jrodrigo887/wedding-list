@@ -19,20 +19,14 @@
   </Teleport>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useNotification } from '@/composables/useNotification'
-import { NOTIFICATION_TYPES } from '@/utils/constants'
+import { NOTIFICATION_TYPES, type NotificationType } from '@/utils/constants'
 
-// ========================================
-// Composables
-// ========================================
 const { notifications, removeNotification } = useNotification()
 
-// ========================================
-// Methods
-// ========================================
-const getIcon = (type) => {
-  const icons = {
+const getIcon = (type: NotificationType): string => {
+  const icons: Record<NotificationType, string> = {
     [NOTIFICATION_TYPES.SUCCESS]: '✓',
     [NOTIFICATION_TYPES.ERROR]: '✕',
     [NOTIFICATION_TYPES.WARNING]: '⚠',

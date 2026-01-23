@@ -4,8 +4,8 @@
   </div>
 </template>
 
-<script setup>
-// App agora e apenas um container para o router
+<script setup lang="ts">
+// App e apenas um container para o router
 </script>
 
 <style scoped>

@@ -73,7 +73,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { APP_CONFIG } from '@/utils/constants'
 import { formatDate } from '@/utils/helpers'
@@ -85,7 +85,7 @@ const linkNaBioUrl = import.meta.env.VITE_INFINITYPAY_LINK_NA_BIO || ''
 
 const formattedDate = computed(() => formatDate(APP_CONFIG.WEDDING_DATE))
 
-const openLinkNaBio = () => {
+const openLinkNaBio = (): void => {
   const width = 450
   const height = 700
   const left = (window.screen.width - width) / 2

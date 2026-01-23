@@ -28,66 +28,45 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { generateId } from '@/utils/helpers'
 
-// ========================================
-// Props
-// ========================================
-const props = defineProps({
-  modelValue: {
-    type: [String, Number],
-    default: '',
-  },
-  type: {
-    type: String,
-    default: 'text',
-  },
-  label: {
-    type: String,
-    default: '',
-  },
-  placeholder: {
-    type: String,
-    default: '',
-  },
-  disabled: {
-    type: Boolean,
-    default: false,
-  },
-  required: {
-    type: Boolean,
-    default: false,
-  },
-  error: {
-    type: String,
-    default: '',
-  },
-  hint: {
-    type: String,
-    default: '',
-  },
-})
-
-// ========================================
-// Emits
-// ========================================
-const emit = defineEmits(['update:modelValue', 'blur'])
-
-// ========================================
-// Data
-// ========================================
-const inputId = ref(generateId())
-
-// ========================================
-// Methods
-// ========================================
-const handleInput = (event) => {
-  emit('update:modelValue', event.target.value)
+interface Props {
+  modelValue?: string | number
+  type?: string
+  label?: string
+  placeholder?: string
+  disabled?: boolean
+  required?: boolean
+  error?: string
+  hint?: string
 }
 
-const handleBlur = (event) => {
+withDefaults(defineProps<Props>(), {
+  modelValue: '',
+  type: 'text',
+  label: '',
+  placeholder: '',
+  disabled: false,
+  required: false,
+  error: '',
+  hint: '',
+})
+
+const emit = defineEmits<{
+  'update:modelValue': [value: string]
+  blur: [event: FocusEvent]
+}>()
+
+const inputId = ref(generateId())
+
+const handleInput = (event: Event): void => {
+  const target = event.target as HTMLInputElement
+  emit('update:modelValue', target.value)
+}
+
+const handleBlur = (event: FocusEvent): void => {
   emit('blur', event)
 }
 </script>

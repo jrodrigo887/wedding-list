@@ -1,10 +1,10 @@
 import { supabase } from "./supabase";
+import type { Guest, ConfirmPresenceResponse, CheckinResponse } from "@/types";
 
-/**
- * Envia dados para o Google Apps Script (apenas como demonstrativo/backup)
- * Executado somente após sucesso no Supabase
- */
-const syncToGoogleScript = async (action, data) => {
+const syncToGoogleScript = async (
+  action: string,
+  data: Record<string, string>,
+): Promise<void> => {
   const googleScriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
   if (!googleScriptUrl) {
@@ -25,23 +25,23 @@ const syncToGoogleScript = async (action, data) => {
     });
     console.log(`[Google Script] Dados sincronizados: ${action}`);
   } catch (error) {
-    // Apenas loga o erro, não interrompe o fluxo
-    console.warn("[Google Script] Erro ao sincronizar:", error.message);
+    console.warn(
+      "[Google Script] Erro ao sincronizar:",
+      error instanceof Error ? error.message : error,
+    );
   }
 };
 
 /**
  * Servico para gerenciar confirmacao de presenca dos convidados
  * Fonte de dados principal: Supabase
- * Google Apps Script: apenas backup/demonstrativo após sucesso
+ * Google Apps Script: apenas backup/demonstrativo apos sucesso
  */
 export const rsvpService = {
   /**
    * Verifica se o codigo do convidado existe
-   * @param {string} code - Codigo do convidado
-   * @returns {Promise<Object>}
    */
-  async checkGuestCode(code) {
+  async checkGuestCode(code: string): Promise<Guest> {
     if (!code) {
       throw new Error("Código não informado");
     }
@@ -75,15 +75,12 @@ export const rsvpService = {
 
   /**
    * Confirma presenca do convidado
-   * @param {string} code - Codigo do convidado
-   * @returns {Promise<Object>}
    */
-  async confirmPresence(code) {
+  async confirmPresence(code: string): Promise<ConfirmPresenceResponse> {
     if (!code) {
       throw new Error("Código não informado");
     }
 
-    // Busca o convidado
     const { data: guest, error: fetchError } = await supabase
       .from("convidados")
       .select("*")
@@ -99,7 +96,6 @@ export const rsvpService = {
       throw new Error(fetchError.message);
     }
 
-    // Atualiza confirmação
     const { error: updateError } = await supabase
       .from("convidados")
       .update({
@@ -118,7 +114,6 @@ export const rsvpService = {
       message = `Presença confirmada com sucesso, ${guest.nome} e ${guest.parceiro}!`;
     }
 
-    // Sincroniza com Google Script após sucesso
     syncToGoogleScript("confirmPresence", { code: guest.codigo });
 
     return {
@@ -136,15 +131,12 @@ export const rsvpService = {
 
   /**
    * Cancela presenca do convidado
-   * @param {string} code - Codigo do convidado
-   * @returns {Promise<Object>}
    */
-  async cancelPresence(code) {
+  async cancelPresence(code: string): Promise<ConfirmPresenceResponse> {
     if (!code) {
       throw new Error("Código não informado");
     }
 
-    // Busca o convidado
     const { data: guest, error: fetchError } = await supabase
       .from("convidados")
       .select("*")
@@ -160,7 +152,6 @@ export const rsvpService = {
       throw new Error(fetchError.message);
     }
 
-    // Atualiza confirmação para false
     const { error: updateError } = await supabase
       .from("convidados")
       .update({
@@ -179,7 +170,6 @@ export const rsvpService = {
       message = `Presença cancelada com sucesso, ${guest.nome} e ${guest.parceiro}!`;
     }
 
-    // Sincroniza com Google Script após sucesso
     syncToGoogleScript("cancelPresence", { code: guest.codigo });
 
     return {
@@ -197,15 +187,12 @@ export const rsvpService = {
 
   /**
    * Registra check-in (entrada) do convidado no dia do evento
-   * @param {string} code - Codigo do convidado
-   * @returns {Promise<Object>}
    */
-  async registerCheckin(code) {
+  async registerCheckin(code: string): Promise<CheckinResponse> {
     if (!code) {
       throw new Error("Código não informado");
     }
 
-    // Busca o convidado
     const { data: guest, error: fetchError } = await supabase
       .from("convidados")
       .select("*")
@@ -219,7 +206,6 @@ export const rsvpService = {
       throw new Error(fetchError.message);
     }
 
-    // Verifica se já fez check-in
     if (guest.checkin) {
       const horarioAnterior = guest.horario_entrada
         ? new Date(guest.horario_entrada).toLocaleTimeString("pt-BR", {
@@ -238,7 +224,6 @@ export const rsvpService = {
       minute: "2-digit",
     });
 
-    // Registra o check-in
     const { error: updateError } = await supabase
       .from("convidados")
       .update({
@@ -257,7 +242,6 @@ export const rsvpService = {
       message = `Check-in realizado para ${guest.nome} e ${guest.parceiro}!`;
     }
 
-    // Sincroniza com Google Script após sucesso
     syncToGoogleScript("registerCheckin", { code: guest.codigo });
 
     return {
@@ -267,15 +251,12 @@ export const rsvpService = {
     };
   },
 
-  /**
-   * Envia QR Code por email para o convidado
-   * @param {Object} params - Parametros do email
-   * @param {string} params.code - Codigo do convidado
-   * @param {string} params.email - Email do destinatario
-   * @param {string} params.name - Nome do convidado
-   * @returns {Promise<Object>}
-   */
-  async sendQRCodeEmail({ code, email, name }) {
+  async sendQRCodeEmail(params: {
+    code: string;
+    email: string;
+    name: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    const { code, email, name } = params;
     const emailApiUrl = import.meta.env.VITE_EMAIL_API_URL;
 
     if (!emailApiUrl) {
@@ -301,7 +282,9 @@ export const rsvpService = {
       return data;
     } catch (error) {
       console.error("[Email] Erro ao enviar email:", error);
-      throw new Error(error.message || "Erro ao enviar email");
+      throw new Error(
+        error instanceof Error ? error.message : "Erro ao enviar email",
+      );
     }
   },
 };

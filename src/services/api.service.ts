@@ -1,14 +1,15 @@
 // ========================================
-// 📡 SERVIÇO DE API
+// SERVICO DE API
 // ========================================
 
-import axios from 'axios'
+import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axios'
 import { APP_CONFIG, API_ENDPOINTS } from '@/utils/constants'
+import type { Gift, Customer } from '@/types'
 
 // ========================================
-// Configuração do Axios
+// Configuracao do Axios
 // ========================================
-const apiClient = axios.create({
+const apiClient: AxiosInstance = axios.create({
   baseURL: APP_CONFIG.API_BASE_URL,
   timeout: APP_CONFIG.API_TIMEOUT,
   headers: {
@@ -21,12 +22,8 @@ const apiClient = axios.create({
 // Request Interceptor
 // ========================================
 apiClient.interceptors.request.use(
-  (config) => {
-    // Adicionar token se necessário
-    // const token = localStorage.getItem('token')
-    // if (token) config.headers.Authorization = `Bearer ${token}`
-
-    console.log(`[API] ${config.method.toUpperCase()} ${config.url}`)
+  (config: InternalAxiosRequestConfig) => {
+    console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`)
     return config
   },
   (error) => {
@@ -44,7 +41,6 @@ apiClient.interceptors.response.use(
     return response
   },
   (error) => {
-    // Tratamento de erros centralizados
     if (error.response) {
       const { status, data } = error.response
 
@@ -54,7 +50,6 @@ apiClient.interceptors.response.use(
           break
         case 401:
           console.error('[API] Unauthorized')
-          // Redirecionar para login se necessário
           break
         case 403:
           console.error('[API] Forbidden')
@@ -79,14 +74,29 @@ apiClient.interceptors.response.use(
 )
 
 // ========================================
+// Interface para servicos de presentes
+// ========================================
+export interface GiftServiceInterface {
+  getGifts(): Promise<Gift[]>
+  reserveGift(giftId: string | number, guestData: Customer): Promise<{ success: boolean; message?: string; error?: string }>
+}
+
+// ========================================
 // Google Sheets Service
 // ========================================
-export const googleSheetsService = {
-  /**
-   * Busca todos os presentes do Google Sheets
-   * @returns {Promise<Array>}
-   */
-  async getGifts() {
+interface GoogleSheetGift {
+  id: string | number
+  nome: string
+  categoria: string
+  descricao?: string
+  preco?: number
+  reservado: boolean
+  reservadoPor?: string
+  tipo?: string
+}
+
+export const googleSheetsService: GiftServiceInterface = {
+  async getGifts(): Promise<Gift[]> {
     const googleScriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL
 
     if (!googleScriptUrl) {
@@ -100,9 +110,7 @@ export const googleSheetsService = {
       throw new Error(data.error)
     }
 
-    // Mapeia os dados do Google Sheets para o formato do app
-    // Estrutura do Google Sheets: id, nome, categoria, descricao, preco, icone, reservado, reservadoPor, tipo
-    return data.gifts.map(gift => ({
+    return data.gifts.map((gift: GoogleSheetGift) => ({
       id: gift.id,
       name: gift.nome,
       category: gift.categoria,
@@ -114,32 +122,24 @@ export const googleSheetsService = {
     }))
   },
 
-  /**
-   * Reserva um presente no Google Sheets
-   * @param {string|number} giftId
-   * @param {Object} guestData - Dados do convidado
-   * @returns {Promise<Object>}
-   */
-  async reserveGift(giftId, guestData) {
+  async reserveGift(giftId: string | number, guestData: Customer) {
     const googleScriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL
 
     if (!googleScriptUrl) {
       throw new Error('URL do Google Apps Script não configurada')
     }
 
-    const payload = {
+    const payload: Record<string, string> = {
       action: 'reserveGift',
-      giftId: giftId,
+      giftId: String(giftId),
       nome: guestData.name || '',
       email: guestData.email || '',
       telefone: guestData.phone || '',
       mensagem: guestData.message || '',
     }
 
-    // Usa fetch com mode 'no-cors' não funciona bem, então usamos form data
-    // que o Google Apps Script aceita sem preflight CORS
     const formData = new FormData()
-    Object.keys(payload).forEach(key => formData.append(key, payload[key]))
+    Object.keys(payload).forEach((key) => formData.append(key, payload[key]))
 
     const response = await fetch(googleScriptUrl, {
       method: 'POST',
@@ -159,44 +159,15 @@ export const googleSheetsService = {
 // ========================================
 // Gift Service (API REST tradicional)
 // ========================================
-export const giftService = {
-  /**
-   * Busca todos os presentes
-   * @returns {Promise<Array>}
-   */
-  async getGifts() {
+export const giftService: GiftServiceInterface = {
+  async getGifts(): Promise<Gift[]> {
     const response = await apiClient.get(API_ENDPOINTS.GIFTS)
     return response.data
   },
 
-  /**
-   * Busca presente por ID
-   * @param {string|number} id
-   * @returns {Promise<Object>}
-   */
-  async getGiftById(id) {
-    const response = await apiClient.get(`${API_ENDPOINTS.GIFTS}/${id}`)
-    return response.data
-  },
-
-  /**
-   * Reserva um presente
-   * @param {string|number} giftId
-   * @param {Object} guestData - Dados do convidado
-   * @returns {Promise<Object>}
-   */
-  async reserveGift(giftId, guestData) {
-    const endpoint = API_ENDPOINTS.RESERVE.replace(':id', giftId)
+  async reserveGift(giftId: string | number, guestData: Customer) {
+    const endpoint = API_ENDPOINTS.RESERVE.replace(':id', String(giftId))
     const response = await apiClient.post(endpoint, guestData)
-    return response.data
-  },
-
-  /**
-   * Busca categorias
-   * @returns {Promise<Array>}
-   */
-  async getCategories() {
-    const response = await apiClient.get(API_ENDPOINTS.CATEGORIES)
     return response.data
   },
 }
@@ -204,13 +175,8 @@ export const giftService = {
 // ========================================
 // Mock Service (para desenvolvimento)
 // ========================================
-export const mockGiftService = {
-  /**
-   * Retorna presentes mockados
-   * @returns {Promise<Array>}
-   */
-  async getGifts() {
-    // Simula delay de API
+export const mockGiftService: GiftServiceInterface = {
+  async getGifts(): Promise<Gift[]> {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     return [
@@ -298,26 +264,19 @@ export const mockGiftService = {
     ]
   },
 
-  async reserveGift(giftId, guestData) {
+  async reserveGift(_giftId: string | number, _guestData: Customer) {
     await new Promise((resolve) => setTimeout(resolve, 1500))
     return {
       success: true,
       message: 'Presente reservado com sucesso!',
-      giftId,
-      guestData,
     }
   },
 }
 
 // ========================================
-// Exportar o serviço apropriado
+// Exportar o servico apropriado
 // ========================================
-// Prioridade:
-// 1. Se VITE_GOOGLE_SCRIPT_URL estiver configurado -> Google Sheets
-// 2. Se estiver em desenvolvimento -> Mock Service
-// 3. Caso contrário -> API REST tradicional
-
-const getActiveService = () => {
+const getActiveService = (): GiftServiceInterface => {
   const googleScriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL
   const useGoogleSheets = import.meta.env.VITE_USE_GOOGLE_SHEETS === 'true'
 

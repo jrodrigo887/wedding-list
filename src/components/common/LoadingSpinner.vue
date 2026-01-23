@@ -5,27 +5,21 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
-// ========================================
-// Props
-// ========================================
-const props = defineProps({
-  size: {
-    type: String,
-    default: 'md',
-    validator: (value) => ['sm', 'md', 'lg'].includes(value),
-  },
-  message: {
-    type: String,
-    default: '',
-  },
+type SpinnerSize = 'sm' | 'md' | 'lg'
+
+interface Props {
+  size?: SpinnerSize
+  message?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  size: 'md',
+  message: '',
 })
 
-// ========================================
-// Computed
-// ========================================
 const sizeClass = computed(() => `loading-spinner--${props.size}`)
 </script>
 
