@@ -3,20 +3,20 @@
 // ========================================
 // URL: https://seu-projeto.vercel.app/api/send-email
 
-const nodemailer = require('nodemailer')
+const nodemailer = require("nodemailer");
 
 // Configuracoes SMTP Hostinger
 const SMTP_CONFIG = {
-  host: 'smtp.hostinger.com',
+  host: "smtp.hostinger.com",
   port: 465,
   secure: true,
   auth: {
-    user: process.env.SMTP_USER || 'no-reply@notificacoes.rodrigoelisa.com.br',
-    pass: process.env.SMTP_PASS || '',
+    user: process.env.SMTP_USER || "no-reply@notificacoes.rodrigoelisa.com.br",
+    pass: process.env.SMTP_PASS || "",
   },
-}
+};
 
-const WEDDING_COUPLE = 'Rodrigo e Elisa'
+const WEDDING_COUPLE = "Rodrigo e Elisa";
 
 // Template HTML do email
 function getEmailTemplate(name, code, qrCodeUrl) {
@@ -80,80 +80,72 @@ function getEmailTemplate(name, code, qrCodeUrl) {
   </div>
 </body>
 </html>
-`
+`;
 }
 
 // Handler Vercel Serverless
 module.exports = async function handler(req, res) {
   // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   // Preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
   }
 
-  // Apenas POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' })
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método não permitido" });
   }
 
   try {
-    const { code, email, name, apiKey } = req.body
+    const { code, email, name } = req.body;
 
-    // Validar API key
-    const validApiKey = process.env.API_KEY || ''
-    if (validApiKey && apiKey !== validApiKey) {
-      return res.status(401).json({ error: 'Não autorizado' })
-    }
-
-    // Validar parâmetros
     if (!code || !email || !name) {
-      return res.status(400).json({ error: 'Parâmetros obrigatórios: code, email, name' })
+      return res
+        .status(400)
+        .json({ error: "Parâmetros obrigatórios: code, email, name" });
     }
 
     // Validar email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Email inválido' })
+      return res.status(400).json({ error: "Email inválido" });
     }
 
-    // Verificar credenciais SMTP
     if (!SMTP_CONFIG.auth.pass) {
-      console.error('SMTP_PASS não configurado')
-      return res.status(500).json({ error: 'Serviço de email não configurado' })
+      console.error("SMTP_PASS não configurado");
+      return res
+        .status(500)
+        .json({ error: "Serviço de email não configurado" });
     }
 
     // Gerar URL do QR Code
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}`
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}`;
 
-    // Criar transporter
-    const transporter = nodemailer.createTransport(SMTP_CONFIG)
+    const transporter = nodemailer.createTransport(SMTP_CONFIG);
 
-    // Enviar email
     const info = await transporter.sendMail({
       from: `"${WEDDING_COUPLE}" <${SMTP_CONFIG.auth.user}>`,
       to: email,
       subject: `Seu QR Code - Casamento ${WEDDING_COUPLE}`,
       text: `Olá ${name}! Sua presença foi confirmada. Seu código é: ${code}`,
       html: getEmailTemplate(name, code, qrCodeUrl),
-    })
+    });
 
-    console.log('Email enviado:', info.messageId)
+    console.log("Email enviado:", info.messageId);
 
     return res.status(200).json({
       success: true,
-      message: 'Email enviado com sucesso!',
+      message: "Email enviado com sucesso!",
       messageId: info.messageId,
-    })
-
+    });
   } catch (error) {
-    console.error('Erro ao enviar email:', error)
+    console.error("Erro ao enviar email:", error);
     return res.status(500).json({
-      error: 'Erro ao enviar email',
+      error: "Erro ao enviar email",
       details: error.message,
-    })
+    });
   }
-}
+};
