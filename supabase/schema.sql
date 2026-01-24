@@ -1,8 +1,3 @@
--- ========================================
--- SCHEMA DO BANCO DE DADOS SUPABASE
--- Lista de Presentes de Casamento
--- ========================================
-
 
 -- ========================================
 -- TABELA: convidados

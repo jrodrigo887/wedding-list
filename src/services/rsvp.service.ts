@@ -268,6 +268,65 @@ export const rsvpService = {
     return count || 0;
   },
 
+  /**
+   * Busca estatísticas gerais dos convidados
+   */
+  async getGuestStats(): Promise<{
+    total: number;
+    confirmed: number;
+    pending: number;
+    checkedIn: number;
+  }> {
+    const [totalResult, confirmedResult, checkedInResult] = await Promise.all([
+      supabase.from("convidados").select("*", { count: "exact", head: true }),
+      supabase
+        .from("convidados")
+        .select("*", { count: "exact", head: true })
+        .eq("confirmado", true),
+      supabase
+        .from("convidados")
+        .select("*", { count: "exact", head: true })
+        .eq("checkin", true),
+    ]);
+
+    const total = totalResult.count || 0;
+    const confirmed = confirmedResult.count || 0;
+    const checkedIn = checkedInResult.count || 0;
+
+    return {
+      total,
+      confirmed,
+      pending: total - confirmed,
+      checkedIn,
+    };
+  },
+
+  /**
+   * Busca lista de convidados com check-in realizado
+   */
+  async getCheckedInGuests(): Promise<Guest[]> {
+    const { data, error } = await supabase
+      .from("convidados")
+      .select("*")
+      .eq("checkin", true)
+      .order("horario_entrada", { ascending: false });
+
+    if (error) {
+      console.error("[Supabase] Erro ao buscar check-ins:", error);
+      return [];
+    }
+
+    return (data || []).map((item) => ({
+      codigo: item.codigo,
+      nome: item.nome,
+      parceiro: item.parceiro || "",
+      acompanhantes: item.acompanhantes || 0,
+      confirmado: item.confirmado || false,
+      entrada_confirmada: item.checkin || false,
+      horario_entrada: item.horario_entrada || "",
+    }));
+  },
+
   async sendQRCodeEmail(params: {
     code: string;
     email: string;

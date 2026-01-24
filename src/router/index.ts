@@ -5,6 +5,11 @@ import HomePage from '@/views/HomePage.vue'
 import RsvpPage from '@/views/RsvpPage.vue'
 import ChaCasaNovaPage from '@/views/ChaCasaNovaPage.vue'
 import CheckinPage from '@/views/CheckinPage.vue'
+import AdminPage from '@/views/AdminPage.vue'
+
+// Modules
+import { ContractsPage } from '@/modules/contracts'
+import { LoginPage, authGuard } from '@/modules/auth'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -26,6 +31,23 @@ const routes: RouteRecordRaw[] = [
     path: '/checkin',
     name: 'checkin',
     component: CheckinPage,
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: LoginPage,
+  },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: AdminPage,
+    beforeEnter: authGuard,
+  },
+  {
+    path: '/contratos',
+    name: 'contracts',
+    component: ContractsPage,
+    beforeEnter: authGuard,
   },
   {
     path: '/:pathMatch(.*)*',
