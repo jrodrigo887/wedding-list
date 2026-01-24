@@ -1,17 +1,22 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
-// Views
+// Views públicas
 import HomePage from '@/views/HomePage.vue'
 import RsvpPage from '@/views/RsvpPage.vue'
 import ChaCasaNovaPage from '@/views/ChaCasaNovaPage.vue'
 import CheckinPage from '@/views/CheckinPage.vue'
-import AdminPage from '@/views/AdminPage.vue'
 
 // Modules
-import { ContractsPage } from '@/modules/contracts'
 import { LoginPage, authGuard } from '@/modules/auth'
+import {
+  AdminLayout,
+  DashboardView,
+  GuestsView,
+  ContractsView,
+} from '@/modules/admin'
 
 const routes: RouteRecordRaw[] = [
+  // Rotas públicas
   {
     path: '/',
     name: 'home',
@@ -37,18 +42,32 @@ const routes: RouteRecordRaw[] = [
     name: 'login',
     component: LoginPage,
   },
+
+  // Rotas administrativas (protegidas)
   {
     path: '/admin',
-    name: 'admin',
-    component: AdminPage,
+    component: AdminLayout,
     beforeEnter: authGuard,
+    children: [
+      {
+        path: '',
+        name: 'admin-dashboard',
+        component: DashboardView,
+      },
+      {
+        path: 'convidados',
+        name: 'admin-guests',
+        component: GuestsView,
+      },
+      {
+        path: 'contratos',
+        name: 'admin-contracts',
+        component: ContractsView,
+      },
+    ],
   },
-  {
-    path: '/contratos',
-    name: 'contracts',
-    component: ContractsPage,
-    beforeEnter: authGuard,
-  },
+
+  // Fallback
   {
     path: '/:pathMatch(.*)*',
     redirect: '/',
