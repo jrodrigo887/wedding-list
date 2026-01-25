@@ -16,6 +16,13 @@
       </button>
       <button
         class="guests-view__tab"
+        :class="{ 'guests-view__tab--active': activeTab === 'lista' }"
+        @click="handleListaTab"
+      >
+        Lista ({{ guestsStore.stats.total }})
+      </button>
+      <button
+        class="guests-view__tab"
         :class="{ 'guests-view__tab--active': activeTab === 'checkins' }"
         @click="activeTab = 'checkins'"
       >
@@ -38,6 +45,14 @@
         />
       </div>
 
+      <!-- Lista Tab -->
+      <div v-if="activeTab === 'lista'" class="guests-view__card">
+        <GuestsTable
+          :guests="guestsStore.guests"
+          :loading="guestsStore.loading"
+        />
+      </div>
+
       <!-- Checkins Tab -->
       <div v-if="activeTab === 'checkins'" class="guests-view__card">
         <CheckinsList
@@ -52,10 +67,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useGuestsStore } from '../../infrastructure/stores';
-import { GuestsStats, CheckinsList, ProgressBar } from '../components';
+import { GuestsStats, CheckinsList, GuestsTable, ProgressBar } from '../components';
 
 const guestsStore = useGuestsStore();
-const activeTab = ref<'overview' | 'checkins'>('overview');
+const activeTab = ref<'overview' | 'lista' | 'checkins'>('overview');
+
+const handleListaTab = async () => {
+  activeTab.value = 'lista';
+  if (!guestsStore.hasData) {
+    await guestsStore.fetchGuests();
+  }
+};
 
 onMounted(async () => {
   await guestsStore.fetchAll();
