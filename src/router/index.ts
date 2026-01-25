@@ -2,9 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 // Views públicas
 import HomePage from '@/views/HomePage.vue'
-import RsvpPage from '@/views/RsvpPage.vue'
 import ChaCasaNovaPage from '@/views/ChaCasaNovaPage.vue'
-import CheckinPage from '@/views/CheckinPage.vue'
 
 // Modules
 import { LoginPage, authGuard } from '@/modules/auth'
@@ -14,6 +12,7 @@ import {
   GuestsView,
   ContractsView,
 } from '@/modules/admin'
+import { RsvpView, CheckinView } from '@/modules/rsvp'
 
 const routes: RouteRecordRaw[] = [
   // Rotas públicas
@@ -25,7 +24,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/confirmar-presenca',
     name: 'rsvp',
-    component: RsvpPage,
+    component: RsvpView,
   },
   {
     path: '/cha-de-casa-nova',
@@ -35,7 +34,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/checkin',
     name: 'checkin',
-    component: CheckinPage,
+    component: CheckinView,
   },
   {
     path: '/login',

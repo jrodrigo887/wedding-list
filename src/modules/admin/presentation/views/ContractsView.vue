@@ -24,7 +24,7 @@
       :title="editingContract ? 'Editar Contrato' : 'Novo Contrato'"
       @close="closeModal"
     >
-      <ContractForm
+      <ContractFormComponent
         :contract="editingContract"
         :loading="saving"
         :error="formError"
@@ -68,7 +68,7 @@ import type { Contract, ContractForm as ContractFormType } from '../../domain/en
 import {
   ContractsStats,
   ContractsTable,
-  ContractForm,
+  ContractFormComponent,
   BaseModal,
   BaseButton,
 } from '../components';

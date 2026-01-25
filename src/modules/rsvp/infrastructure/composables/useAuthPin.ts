@@ -3,16 +3,26 @@ import { ref } from 'vue';
 const COOKIE_NAME = 'auth_pin';
 const COOKIE_EXPIRY_DAYS = 2;
 
+/**
+ * Estado global de autenticação por PIN
+ * Mantido fora do composable para persistir entre instâncias
+ */
 const authenticated = ref(false);
 const pin = ref('');
 const authError = ref('');
 
+/**
+ * Define um cookie
+ */
 const setCookie = (name: string, value: string, days: number): void => {
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
   document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=Strict`;
 };
 
+/**
+ * Recupera um cookie
+ */
 const getCookie = (name: string): string | null => {
   const nameEQ = `${name}=`;
   const cookies = document.cookie.split(';');
@@ -25,10 +35,16 @@ const getCookie = (name: string): string | null => {
   return null;
 };
 
+/**
+ * Remove um cookie
+ */
 const deleteCookie = (name: string): void => {
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
 };
 
+/**
+ * Restaura a sessão a partir do cookie
+ */
 const restoreSession = (): void => {
   const savedPin = getCookie(COOKIE_NAME);
   const correctPin = import.meta.env.VITE_CHECKIN_PIN;
@@ -39,6 +55,9 @@ const restoreSession = (): void => {
   }
 };
 
+/**
+ * Valida o PIN informado
+ */
 const validatePin = async (): Promise<void> => {
   const correctPin = import.meta.env.VITE_CHECKIN_PIN;
 
@@ -51,6 +70,9 @@ const validatePin = async (): Promise<void> => {
   }
 };
 
+/**
+ * Realiza logout
+ */
 const logout = (): void => {
   authenticated.value = false;
   pin.value = '';
@@ -58,15 +80,19 @@ const logout = (): void => {
   deleteCookie(COOKIE_NAME);
 };
 
-// Restaura a sessão ao carregar
+// Restaura a sessão ao carregar o módulo
 restoreSession();
 
+/**
+ * Composable: useAuthPin
+ * Gerencia autenticação por PIN para área de check-in
+ */
 export const useAuthPin = () => {
   return {
-    validatePin,
-    authError,
     authenticated,
     pin,
+    authError,
+    validatePin,
     logout,
     restoreSession,
   };
