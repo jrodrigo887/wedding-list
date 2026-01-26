@@ -1,4 +1,6 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw, type NavigationGuardNext, type RouteLocationNormalized } from 'vue-router'
+import { hasFeature } from '@/config/tenant'
+import type { TenantConfig } from '@/config/tenant'
 
 // Views públicas
 import HomePage from '@/views/HomePage.vue'
@@ -15,6 +17,24 @@ import {
 import { RsvpView, CheckinView } from '@/modules/rsvp'
 import { PhotoFeedView, PhotoUploadView, AdminPhotosView } from '@/modules/photos'
 
+/**
+ * Guard para verificar se uma feature está habilitada
+ */
+const featureGuard = (feature: keyof TenantConfig['features']) => {
+  return (
+    _to: RouteLocationNormalized,
+    _from: RouteLocationNormalized,
+    next: NavigationGuardNext
+  ) => {
+    if (hasFeature(feature)) {
+      next()
+    } else {
+      console.warn(`[Router] Feature "${feature}" não está habilitada para este tenant`)
+      next({ name: 'feature-not-available', query: { feature } })
+    }
+  }
+}
+
 const routes: RouteRecordRaw[] = [
   // Rotas públicas
   {
@@ -26,6 +46,7 @@ const routes: RouteRecordRaw[] = [
     path: '/confirmar-presenca',
     name: 'rsvp',
     component: RsvpView,
+    beforeEnter: featureGuard('rsvp'),
   },
   {
     path: '/cha-de-casa-nova',
@@ -36,16 +57,19 @@ const routes: RouteRecordRaw[] = [
     path: '/checkin',
     name: 'checkin',
     component: CheckinView,
+    beforeEnter: featureGuard('checkin'),
   },
   {
     path: '/fotos',
     name: 'photos',
     component: PhotoFeedView,
+    beforeEnter: featureGuard('photos'),
   },
   {
     path: '/fotos/enviar',
     name: 'photos-upload',
     component: PhotoUploadView,
+    beforeEnter: featureGuard('photos'),
   },
   {
     path: '/login',
@@ -73,13 +97,22 @@ const routes: RouteRecordRaw[] = [
         path: 'contratos',
         name: 'admin-contracts',
         component: ContractsView,
+        beforeEnter: featureGuard('contracts'),
       },
       {
         path: 'fotos',
         name: 'admin-photos',
         component: AdminPhotosView,
+        beforeEnter: featureGuard('photos'),
       },
     ],
+  },
+
+  // Página de feature não disponível
+  {
+    path: '/feature-not-available',
+    name: 'feature-not-available',
+    component: () => import('@/views/FeatureNotAvailablePage.vue'),
   },
 
   // Fallback

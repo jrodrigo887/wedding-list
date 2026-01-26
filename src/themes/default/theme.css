@@ -1,0 +1,35 @@
+/* Default Theme - Romântico e Elegante */
+/* Tema padrão para casamentos com tons de rosa e dourado */
+
+:root {
+  /* Cores principais */
+  --tenant-primary: #8B5A5A;
+  --tenant-primary-hover: #6d4444;
+  --tenant-primary-light: #a87a7a;
+
+  --tenant-secondary: #D4A574;
+  --tenant-secondary-hover: #c49464;
+  --tenant-secondary-light: #e5c4a4;
+
+  /* Backgrounds */
+  --tenant-background: #FDF8F5;
+  --tenant-background-secondary: #FAF4F0;
+  --tenant-background-card: #FFFFFF;
+
+  /* Textos */
+  --tenant-text: #4A3C3C;
+  --tenant-text-secondary: #6B5B5B;
+  --tenant-text-muted: #9A8A8A;
+
+  /* Bordas */
+  --tenant-border: #E5DDD8;
+  --tenant-border-light: #F0EBE8;
+
+  /* Tipografia */
+  --tenant-font-heading: 'Playfair Display', serif;
+  --tenant-font-body: 'Lato', sans-serif;
+
+  /* Layout */
+  --tenant-radius: 8px;
+  --tenant-radius-lg: 12px;
+}
