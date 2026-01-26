@@ -1,20 +1,23 @@
+// RSVP Module - Entities
+// Todas as entidades do módulo de confirmação de presença
+
 /**
  * Entity: RsvpGuest
  * Representa um convidado no contexto de RSVP (confirmação de presença)
  */
 export interface RsvpGuest {
-  id?: number;
-  codigo: string;
-  nome: string;
-  parceiro?: string;
-  email?: string;
-  telefone?: string;
-  acompanhantes: number;
-  confirmado: boolean;
-  data_confirmacao?: string;
-  checkin?: boolean;
-  entrada_confirmada?: boolean;
-  horario_entrada?: string;
+  id?: number
+  codigo: string
+  nome: string
+  parceiro?: string
+  email?: string
+  telefone?: string
+  acompanhantes: number
+  confirmado: boolean
+  data_confirmacao?: string
+  checkin?: boolean
+  entrada_confirmada?: boolean
+  horario_entrada?: string
 }
 
 /**
@@ -22,9 +25,9 @@ export interface RsvpGuest {
  * Resposta da confirmação de presença
  */
 export interface ConfirmPresenceResponse {
-  success: boolean;
-  message: string;
-  guest: Omit<RsvpGuest, 'id'>;
+  success: boolean
+  message: string
+  guest: Omit<RsvpGuest, 'id'>
 }
 
 /**
@@ -32,9 +35,9 @@ export interface ConfirmPresenceResponse {
  * Resposta do registro de check-in
  */
 export interface CheckinResponse {
-  success: boolean;
-  message: string;
-  horario: string;
+  success: boolean
+  message: string
+  horario: string
 }
 
 /**
@@ -42,10 +45,10 @@ export interface CheckinResponse {
  * Estatísticas de RSVP e check-in
  */
 export interface RsvpStats {
-  total: number;
-  confirmed: number;
-  pending: number;
-  checkedIn: number;
+  total: number
+  confirmed: number
+  pending: number
+  checkedIn: number
 }
 
 /**
@@ -53,9 +56,9 @@ export interface RsvpStats {
  * Parâmetros para envio de QR Code por email
  */
 export interface SendQRCodeEmailParams {
-  code: string;
-  email: string;
-  name: string;
+  code: string
+  email: string
+  name: string
 }
 
 /**
@@ -67,4 +70,4 @@ export const createEmptyRsvpStats = (): RsvpStats => ({
   confirmed: 0,
   pending: 0,
   checkedIn: 0,
-});
+})
