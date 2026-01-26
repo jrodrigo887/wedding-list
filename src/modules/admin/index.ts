@@ -1,12 +1,9 @@
 // Domain
-export * from './domain/entities';
-export * from './domain/interfaces';
+export * from './domain/entities'
+export * from './domain/interfaces'
 
 // Infrastructure
-export * from './infrastructure/repositories';
-export * from './infrastructure/stores';
+export * from './infrastructure'
 
 // Presentation
-export * from './presentation/components';
-export * from './presentation/layouts';
-export * from './presentation/views';
+export * from './presentation'
