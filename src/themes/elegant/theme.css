@@ -1,0 +1,35 @@
+/* Elegant Theme - Sofisticado e Moderno */
+/* Tema elegante com tons de azul marinho e dourado */
+
+:root {
+  /* Cores principais */
+  --tenant-primary: #1a365d;
+  --tenant-primary-hover: #153152;
+  --tenant-primary-light: #2d4a7c;
+
+  --tenant-secondary: #c9a227;
+  --tenant-secondary-hover: #b8921f;
+  --tenant-secondary-light: #dab94a;
+
+  /* Backgrounds */
+  --tenant-background: #f8fafc;
+  --tenant-background-secondary: #f1f5f9;
+  --tenant-background-card: #FFFFFF;
+
+  /* Textos */
+  --tenant-text: #1e293b;
+  --tenant-text-secondary: #475569;
+  --tenant-text-muted: #94a3b8;
+
+  /* Bordas */
+  --tenant-border: #e2e8f0;
+  --tenant-border-light: #f1f5f9;
+
+  /* Tipografia */
+  --tenant-font-heading: 'Cormorant Garamond', serif;
+  --tenant-font-body: 'Montserrat', sans-serif;
+
+  /* Layout */
+  --tenant-radius: 4px;
+  --tenant-radius-lg: 8px;
+}

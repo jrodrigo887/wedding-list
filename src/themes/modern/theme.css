@@ -1,0 +1,35 @@
+/* Modern Theme - Minimalista e Clean */
+/* Tema moderno com tons neutros e toques de verde */
+
+:root {
+  /* Cores principais */
+  --tenant-primary: #059669;
+  --tenant-primary-hover: #047857;
+  --tenant-primary-light: #10b981;
+
+  --tenant-secondary: #6366f1;
+  --tenant-secondary-hover: #4f46e5;
+  --tenant-secondary-light: #818cf8;
+
+  /* Backgrounds */
+  --tenant-background: #fafafa;
+  --tenant-background-secondary: #f5f5f5;
+  --tenant-background-card: #FFFFFF;
+
+  /* Textos */
+  --tenant-text: #171717;
+  --tenant-text-secondary: #404040;
+  --tenant-text-muted: #737373;
+
+  /* Bordas */
+  --tenant-border: #e5e5e5;
+  --tenant-border-light: #f5f5f5;
+
+  /* Tipografia */
+  --tenant-font-heading: 'Inter', sans-serif;
+  --tenant-font-body: 'Inter', sans-serif;
+
+  /* Layout */
+  --tenant-radius: 12px;
+  --tenant-radius-lg: 16px;
+}

@@ -9,3 +9,6 @@ export * from './composables'
 
 // Types
 export * from './types'
+
+// Factories
+export * from './factories'

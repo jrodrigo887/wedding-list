@@ -1,0 +1,101 @@
+/* Base Theme - CSS Variables */
+/* Este arquivo define todas as variáveis CSS que podem ser customizadas por tenant */
+
+:root {
+  /* === Cores Primárias === */
+  --primary-color: var(--tenant-primary, #8B5A5A);
+  --primary-hover: var(--tenant-primary-hover, #6d4444);
+  --primary-light: var(--tenant-primary-light, #a87a7a);
+
+  --secondary-color: var(--tenant-secondary, #D4A574);
+  --secondary-hover: var(--tenant-secondary-hover, #c49464);
+  --secondary-light: var(--tenant-secondary-light, #e5c4a4);
+
+  /* === Cores de Background === */
+  --background-color: var(--tenant-background, #FDF8F5);
+  --background-secondary: var(--tenant-background-secondary, #FAF4F0);
+  --background-card: var(--tenant-background-card, #FFFFFF);
+
+  /* === Cores de Texto === */
+  --text-color: var(--tenant-text, #4A3C3C);
+  --text-secondary: var(--tenant-text-secondary, #6B5B5B);
+  --text-muted: var(--tenant-text-muted, #9A8A8A);
+  --text-inverse: var(--tenant-text-inverse, #FFFFFF);
+
+  /* === Cores de Estado === */
+  --success-color: var(--tenant-success, #4CAF50);
+  --success-light: var(--tenant-success-light, #E8F5E9);
+  --warning-color: var(--tenant-warning, #FF9800);
+  --warning-light: var(--tenant-warning-light, #FFF3E0);
+  --error-color: var(--tenant-error, #F44336);
+  --error-light: var(--tenant-error-light, #FFEBEE);
+  --info-color: var(--tenant-info, #2196F3);
+  --info-light: var(--tenant-info-light, #E3F2FD);
+
+  /* === Bordas === */
+  --border-color: var(--tenant-border, #E5DDD8);
+  --border-light: var(--tenant-border-light, #F0EBE8);
+
+  /* === Tipografia === */
+  --font-heading: var(--tenant-font-heading, 'Playfair Display', serif);
+  --font-body: var(--tenant-font-body, 'Lato', sans-serif);
+
+  --font-size-xs: var(--tenant-font-size-xs, 0.75rem);
+  --font-size-sm: var(--tenant-font-size-sm, 0.875rem);
+  --font-size-base: var(--tenant-font-size-base, 1rem);
+  --font-size-lg: var(--tenant-font-size-lg, 1.125rem);
+  --font-size-xl: var(--tenant-font-size-xl, 1.25rem);
+  --font-size-2xl: var(--tenant-font-size-2xl, 1.5rem);
+  --font-size-3xl: var(--tenant-font-size-3xl, 1.875rem);
+  --font-size-4xl: var(--tenant-font-size-4xl, 2.25rem);
+
+  /* === Espaçamento === */
+  --spacing-unit: var(--tenant-spacing, 8px);
+  --spacing-xs: calc(var(--spacing-unit) * 0.5);
+  --spacing-sm: var(--spacing-unit);
+  --spacing-md: calc(var(--spacing-unit) * 2);
+  --spacing-lg: calc(var(--spacing-unit) * 3);
+  --spacing-xl: calc(var(--spacing-unit) * 4);
+  --spacing-2xl: calc(var(--spacing-unit) * 6);
+
+  /* === Bordas e Sombras === */
+  --border-radius-sm: var(--tenant-radius-sm, 4px);
+  --border-radius: var(--tenant-radius, 8px);
+  --border-radius-lg: var(--tenant-radius-lg, 12px);
+  --border-radius-xl: var(--tenant-radius-xl, 16px);
+  --border-radius-full: var(--tenant-radius-full, 9999px);
+
+  --shadow-sm: var(--tenant-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  --shadow: var(--tenant-shadow, 0 2px 4px rgba(0, 0, 0, 0.1));
+  --shadow-md: var(--tenant-shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
+  --shadow-lg: var(--tenant-shadow-lg, 0 10px 15px rgba(0, 0, 0, 0.1));
+  --shadow-xl: var(--tenant-shadow-xl, 0 20px 25px rgba(0, 0, 0, 0.15));
+
+  /* === Transições === */
+  --transition-fast: var(--tenant-transition-fast, 150ms);
+  --transition-normal: var(--tenant-transition-normal, 300ms);
+  --transition-slow: var(--tenant-transition-slow, 500ms);
+
+  /* === Z-Index === */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+}
+
+/* === Dark Mode Support === */
+[data-theme="dark"] {
+  --background-color: var(--tenant-dark-background, #1A1A1A);
+  --background-secondary: var(--tenant-dark-background-secondary, #2D2D2D);
+  --background-card: var(--tenant-dark-background-card, #3D3D3D);
+
+  --text-color: var(--tenant-dark-text, #F5F5F5);
+  --text-secondary: var(--tenant-dark-text-secondary, #CCCCCC);
+  --text-muted: var(--tenant-dark-text-muted, #999999);
+
+  --border-color: var(--tenant-dark-border, #4D4D4D);
+  --border-light: var(--tenant-dark-border-light, #3D3D3D);
+}
