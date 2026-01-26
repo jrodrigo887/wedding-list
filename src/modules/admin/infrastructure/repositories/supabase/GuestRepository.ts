@@ -15,20 +15,11 @@ export class GuestRepositorySupabase implements IGuestRepository {
     this.tenantId = tenantId
   }
 
-  // Preparação para multi-tenancy: retorna filtro de tenant
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected getTenantFilter() {
-    // TODO: Ativar quando coluna tenant_id existir no banco
-    // return { tenant_id: this.tenantId }
-    return {}
-  }
-
   async getAll(): Promise<Guest[]> {
     const { data, error } = await supabase
       .from(this.TABLE)
       .select('*')
-      // TODO: Adicionar filtro por tenant quando a coluna existir
-      // .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .order('nome', { ascending: true })
 
     if (error) {
@@ -44,7 +35,7 @@ export class GuestRepositorySupabase implements IGuestRepository {
       .from(this.TABLE)
       .select('*')
       .eq('id', id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .single()
 
     if (error) {
@@ -60,7 +51,7 @@ export class GuestRepositorySupabase implements IGuestRepository {
       .from(this.TABLE)
       .select('*')
       .ilike('codigo', code)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .single()
 
     if (error) {
@@ -75,18 +66,18 @@ export class GuestRepositorySupabase implements IGuestRepository {
     const [totalResult, confirmedResult, checkedInResult] = await Promise.all([
       supabase
         .from(this.TABLE)
-        .select('*', { count: 'exact', head: true }),
-        // TODO: .eq('tenant_id', this.tenantId),
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId),
       supabase
         .from(this.TABLE)
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId)
         .eq('confirmado', true),
-        // TODO: .eq('tenant_id', this.tenantId),
       supabase
         .from(this.TABLE)
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId)
         .eq('checkin', true),
-        // TODO: .eq('tenant_id', this.tenantId),
     ])
 
     const total = totalResult.count || 0
@@ -105,8 +96,8 @@ export class GuestRepositorySupabase implements IGuestRepository {
     const { data, error } = await supabase
       .from(this.TABLE)
       .select('*')
+      .eq('tenant_id', this.tenantId)
       .eq('checkin', true)
-      // TODO: .eq('tenant_id', this.tenantId)
       .order('horario_entrada', { ascending: false })
 
     if (error) {
@@ -130,7 +121,7 @@ export class GuestRepositorySupabase implements IGuestRepository {
         horario_entrada: new Date().toISOString(),
       })
       .eq('id', guest.id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
 
     if (error) {
       throw new Error(error.message)

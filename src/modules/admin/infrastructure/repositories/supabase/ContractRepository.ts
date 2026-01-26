@@ -15,19 +15,11 @@ export class ContractRepositorySupabase implements IContractRepository {
     this.tenantId = tenantId
   }
 
-  // Preparação para multi-tenancy: retorna filtro de tenant
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected getTenantFilter() {
-    // TODO: Ativar quando coluna tenant_id existir no banco
-    // return { tenant_id: this.tenantId }
-    return {}
-  }
-
   async getAll(): Promise<Contract[]> {
     const { data, error } = await supabase
       .from(this.TABLE)
       .select('*')
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -43,7 +35,7 @@ export class ContractRepositorySupabase implements IContractRepository {
       .from(this.TABLE)
       .select('*')
       .eq('id', id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .single()
 
     if (error) {
@@ -63,7 +55,7 @@ export class ContractRepositorySupabase implements IContractRepository {
         contato: form.contato || null,
         valor: form.valor ? Number(form.valor) : null,
         pago: form.pago ? Number(form.pago) : null,
-        // TODO: tenant_id: this.tenantId,
+        tenant_id: this.tenantId,
       })
       .select()
       .single()
@@ -87,7 +79,7 @@ export class ContractRepositorySupabase implements IContractRepository {
         pago: form.pago ? Number(form.pago) : null,
       })
       .eq('id', id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .select()
       .single()
 
@@ -104,7 +96,7 @@ export class ContractRepositorySupabase implements IContractRepository {
       .from(this.TABLE)
       .delete()
       .eq('id', id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
 
     if (error) {
       console.error('[ContractRepositorySupabase] Erro ao excluir contrato:', error)
