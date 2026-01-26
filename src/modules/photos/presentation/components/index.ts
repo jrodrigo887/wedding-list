@@ -1,0 +1,9 @@
+export { default as PhotoCard } from './PhotoCard.vue';
+export { default as PhotoFeed } from './PhotoFeed.vue';
+export { default as PhotoModal } from './PhotoModal.vue';
+export { default as PhotoUploader } from './PhotoUploader.vue';
+export { default as PhotoModeration } from './PhotoModeration.vue';
+export { default as LikeButton } from './LikeButton.vue';
+export { default as CommentSection } from './CommentSection.vue';
+export { default as CommentItem } from './CommentItem.vue';
+export { default as UploadProgress } from './UploadProgress.vue';

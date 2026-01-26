@@ -37,6 +37,7 @@
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '@/modules/auth';
 import { useGuestsStore, useContractsStore } from '../../infrastructure/stores';
+import { usePhotosStore } from '@/modules/photos';
 import { BaseButton } from '../components/common';
 
 const router = useRouter();
@@ -44,11 +45,13 @@ const route = useRoute();
 const { logout } = useAuth();
 const guestsStore = useGuestsStore();
 const contractsStore = useContractsStore();
+const photosStore = usePhotosStore();
 
 const navItems = [
   { to: '/admin', label: 'Dashboard' },
   { to: '/admin/convidados', label: 'Convidados' },
   { to: '/admin/contratos', label: 'Contratos' },
+  { to: '/admin/fotos', label: 'Fotos' },
 ];
 
 const isActive = (path: string): boolean => {
@@ -59,12 +62,17 @@ const isActive = (path: string): boolean => {
 };
 
 const handleRefresh = async () => {
-  await Promise.all([guestsStore.refresh(), contractsStore.refresh()]);
+  await Promise.all([
+    guestsStore.refresh(),
+    contractsStore.refresh(),
+    photosStore.fetchStats(),
+  ]);
 };
 
 const handleLogout = async () => {
   guestsStore.reset();
   contractsStore.reset();
+  photosStore.reset();
   await logout();
   router.push('/login');
 };

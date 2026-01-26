@@ -13,6 +13,7 @@ import {
   ContractsView,
 } from '@/modules/admin'
 import { RsvpView, CheckinView } from '@/modules/rsvp'
+import { PhotoFeedView, PhotoUploadView, AdminPhotosView } from '@/modules/photos'
 
 const routes: RouteRecordRaw[] = [
   // Rotas públicas
@@ -35,6 +36,16 @@ const routes: RouteRecordRaw[] = [
     path: '/checkin',
     name: 'checkin',
     component: CheckinView,
+  },
+  {
+    path: '/fotos',
+    name: 'photos',
+    component: PhotoFeedView,
+  },
+  {
+    path: '/fotos/enviar',
+    name: 'photos-upload',
+    component: PhotoUploadView,
   },
   {
     path: '/login',
@@ -62,6 +73,11 @@ const routes: RouteRecordRaw[] = [
         path: 'contratos',
         name: 'admin-contracts',
         component: ContractsView,
+      },
+      {
+        path: 'fotos',
+        name: 'admin-photos',
+        component: AdminPhotosView,
       },
     ],
   },
