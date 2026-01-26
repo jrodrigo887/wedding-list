@@ -26,22 +26,14 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
     this.tenantId = tenantId
   }
 
-  // Preparação para multi-tenancy: retorna filtro de tenant
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected getTenantFilter() {
-    // TODO: Ativar quando coluna tenant_id existir no banco
-    // return { tenant_id: this.tenantId }
-    return {}
-  }
-
   // ========== CRUD DE FOTOS ==========
 
   async getApprovedPhotos(limit = 50, offset = 0): Promise<Photo[]> {
     const { data, error } = await supabase
       .from(this.TABLE)
       .select('*')
+      .eq('tenant_id', this.tenantId)
       .eq('aprovado', true)
-      // TODO: .eq('tenant_id', this.tenantId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -57,7 +49,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
     const { data, error } = await supabase
       .from(this.TABLE)
       .select('*')
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -72,8 +64,8 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
     const { data, error } = await supabase
       .from(this.TABLE)
       .select('*')
+      .eq('tenant_id', this.tenantId)
       .eq('aprovado', false)
-      // TODO: .eq('tenant_id', this.tenantId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -88,8 +80,8 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
     const { data, error } = await supabase
       .from(this.TABLE)
       .select('*')
+      .eq('tenant_id', this.tenantId)
       .ilike('codigo_convidado', codigo)
-      // TODO: .eq('tenant_id', this.tenantId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -105,7 +97,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       .from(this.TABLE)
       .select('*')
       .eq('id', id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .single()
 
     if (error) {
@@ -153,7 +145,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
           mime_type: compressedFile.type,
           caption: uploadData.caption || null,
           aprovado: shouldAutoApprove,
-          // TODO: tenant_id: this.tenantId,
+          tenant_id: this.tenantId,
         })
         .select()
         .single()
@@ -197,7 +189,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       .from(this.TABLE)
       .delete()
       .eq('id', id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
 
     if (error) {
       console.error('[PhotoRepositorySupabase] Erro ao deletar foto:', error)
@@ -212,7 +204,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       .from(this.TABLE)
       .update({ aprovado: true, updated_at: new Date().toISOString() })
       .eq('id', id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
 
     if (error) {
       console.error('[PhotoRepositorySupabase] Erro ao aprovar foto:', error)
@@ -230,8 +222,8 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
     const { error } = await supabase
       .from(this.TABLE)
       .update({ aprovado: true, updated_at: new Date().toISOString() })
+      .eq('tenant_id', this.tenantId)
       .in('id', ids)
-      // TODO: .eq('tenant_id', this.tenantId)
 
     if (error) {
       console.error('[PhotoRepositorySupabase] Erro ao aprovar fotos em lote:', error)
@@ -250,7 +242,11 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
   async likePhoto(fotoId: number, codigoConvidado: string): Promise<void> {
     const { error } = await supabase
       .from(this.LIKES_TABLE)
-      .insert({ foto_id: fotoId, codigo_convidado: codigoConvidado })
+      .insert({
+        foto_id: fotoId,
+        codigo_convidado: codigoConvidado,
+        tenant_id: this.tenantId,
+      })
 
     // Ignora erro de constraint única (já curtiu)
     if (error && error.code !== '23505') {
@@ -265,6 +261,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       .delete()
       .eq('foto_id', fotoId)
       .eq('codigo_convidado', codigoConvidado)
+      .eq('tenant_id', this.tenantId)
 
     if (error) {
       console.error('[PhotoRepositorySupabase] Erro ao descurtir foto:', error)
@@ -277,6 +274,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       .from(this.LIKES_TABLE)
       .select('*', { count: 'exact', head: true })
       .eq('foto_id', fotoId)
+      .eq('tenant_id', this.tenantId)
 
     if (error) {
       console.error('[PhotoRepositorySupabase] Erro ao buscar likes:', error)
@@ -292,6 +290,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       .select('id')
       .eq('foto_id', fotoId)
       .eq('codigo_convidado', codigoConvidado)
+      .eq('tenant_id', this.tenantId)
       .single()
 
     if (error && error.code !== 'PGRST116') {
@@ -308,6 +307,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       .from(this.COMMENTS_TABLE)
       .select('*')
       .eq('foto_id', fotoId)
+      .eq('tenant_id', this.tenantId)
       .order('created_at', { ascending: true })
 
     if (error) {
@@ -326,6 +326,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
         codigo_convidado: commentData.codigo_convidado,
         nome_convidado: commentData.nome_convidado,
         texto: commentData.texto,
+        tenant_id: this.tenantId,
       })
       .select()
       .single()
@@ -339,7 +340,11 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
   }
 
   async deleteComment(id: number): Promise<void> {
-    const { error } = await supabase.from(this.COMMENTS_TABLE).delete().eq('id', id)
+    const { error } = await supabase
+      .from(this.COMMENTS_TABLE)
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', this.tenantId)
 
     if (error) {
       console.error('[PhotoRepositorySupabase] Erro ao deletar comentário:', error)
@@ -353,15 +358,21 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
     const [totalResult, approvedResult, likesResult, commentsResult] = await Promise.all([
       supabase
         .from(this.TABLE)
-        .select('*', { count: 'exact', head: true }),
-        // TODO: .eq('tenant_id', this.tenantId),
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId),
       supabase
         .from(this.TABLE)
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId)
         .eq('aprovado', true),
-        // TODO: .eq('tenant_id', this.tenantId),
-      supabase.from(this.LIKES_TABLE).select('*', { count: 'exact', head: true }),
-      supabase.from(this.COMMENTS_TABLE).select('*', { count: 'exact', head: true }),
+      supabase
+        .from(this.LIKES_TABLE)
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId),
+      supabase
+        .from(this.COMMENTS_TABLE)
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId),
     ])
 
     const total = totalResult.count || 0
@@ -380,8 +391,8 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
     const { count, error } = await supabase
       .from(this.TABLE)
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', this.tenantId)
       .ilike('codigo_convidado', codigo)
-      // TODO: .eq('tenant_id', this.tenantId)
 
     if (error) {
       console.error('[PhotoRepositorySupabase] Erro ao contar fotos do convidado:', error)

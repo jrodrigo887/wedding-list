@@ -55,14 +55,6 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
     this.tenantId = tenantId
   }
 
-  // Preparação para multi-tenancy: retorna filtro de tenant
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected getTenantFilter() {
-    // TODO: Ativar quando coluna tenant_id existir no banco
-    // return { tenant_id: this.tenantId }
-    return {}
-  }
-
   async getByCode(code: string): Promise<RsvpGuest> {
     if (!code) {
       throw new Error('Código não informado')
@@ -72,7 +64,7 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
       .from(this.TABLE)
       .select('*')
       .ilike('codigo', code)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .single()
 
     if (error) {
@@ -97,7 +89,7 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
       .from(this.TABLE)
       .select('*')
       .ilike('codigo', code)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .single()
 
     if (fetchError) {
@@ -116,7 +108,7 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
         data_confirmacao: new Date().toISOString(),
       })
       .eq('id', guest.id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
 
     if (updateError) {
       console.error('[RsvpRepositorySupabase] Erro ao confirmar presença:', updateError)
@@ -152,7 +144,7 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
       .from(this.TABLE)
       .select('*')
       .ilike('codigo', code)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .single()
 
     if (fetchError) {
@@ -171,7 +163,7 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
         data_confirmacao: new Date().toISOString(),
       })
       .eq('id', guest.id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
 
     if (updateError) {
       console.error('[RsvpRepositorySupabase] Erro ao cancelar presença:', updateError)
@@ -207,7 +199,7 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
       .from(this.TABLE)
       .select('*')
       .ilike('codigo', code)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
       .single()
 
     if (fetchError) {
@@ -242,7 +234,7 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
         horario_entrada: now.toISOString(),
       })
       .eq('id', guest.id)
-      // TODO: .eq('tenant_id', this.tenantId)
+      .eq('tenant_id', this.tenantId)
 
     if (updateError) {
       console.error('[RsvpRepositorySupabase] Erro ao registrar check-in:', updateError)
@@ -267,8 +259,8 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
     const { count, error } = await supabase
       .from(this.TABLE)
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', this.tenantId)
       .eq('checkin', true)
-      // TODO: .eq('tenant_id', this.tenantId)
 
     if (error) {
       console.error('[RsvpRepositorySupabase] Erro ao buscar contagem de check-ins:', error)
@@ -282,18 +274,18 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
     const [totalResult, confirmedResult, checkedInResult] = await Promise.all([
       supabase
         .from(this.TABLE)
-        .select('*', { count: 'exact', head: true }),
-        // TODO: .eq('tenant_id', this.tenantId),
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId),
       supabase
         .from(this.TABLE)
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId)
         .eq('confirmado', true),
-        // TODO: .eq('tenant_id', this.tenantId),
       supabase
         .from(this.TABLE)
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId)
         .eq('checkin', true),
-        // TODO: .eq('tenant_id', this.tenantId),
     ])
 
     const total = totalResult.count || 0
@@ -312,8 +304,8 @@ export class RsvpRepositorySupabase implements IRsvpRepository {
     const { data, error } = await supabase
       .from(this.TABLE)
       .select('*')
+      .eq('tenant_id', this.tenantId)
       .eq('checkin', true)
-      // TODO: .eq('tenant_id', this.tenantId)
       .order('horario_entrada', { ascending: false })
 
     if (error) {
