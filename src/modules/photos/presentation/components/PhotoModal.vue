@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import type { Photo } from '../../domain/entities';
 import { usePhotosStore } from '../../infrastructure/stores';
 import { downloadSinglePhoto } from '../../infrastructure/services';
+import { formatDuration } from '../../infrastructure/services/videoCompressor';
 import LikeButton from './LikeButton.vue';
 import CommentSection from './CommentSection.vue';
 
 /**
  * Component: PhotoModal
- * Modal de visualização de foto em tela cheia
+ * Modal de visualização de foto/vídeo em tela cheia
  */
 
 interface Props {
@@ -23,12 +24,21 @@ const emit = defineEmits<{
 
 const store = usePhotosStore();
 const downloading = ref(false);
+const videoRef = ref<HTMLVideoElement | null>(null);
+
+const isVideo = computed(() => props.photo?.media_type === 'video');
+
+const mediaLabel = computed(() => isVideo.value ? 'Vídeo' : 'Foto');
 
 watch(
   () => props.photo,
-  async (newPhoto) => {
+  async (newPhoto, oldPhoto) => {
     if (newPhoto) {
       await store.fetchPhotoComments(newPhoto.id!);
+    }
+    // Pause o vídeo anterior ao trocar
+    if (oldPhoto && videoRef.value) {
+      videoRef.value.pause();
     }
   },
   { immediate: true }
@@ -58,6 +68,14 @@ const handleDownload = async () => {
   }
 };
 
+const handleClose = () => {
+  // Pausa o vídeo antes de fechar
+  if (videoRef.value) {
+    videoRef.value.pause();
+  }
+  emit('close');
+};
+
 const formatDate = (dateStr?: string): string => {
   if (!dateStr) return '';
   const date = new Date(dateStr);
@@ -74,13 +92,28 @@ const formatDate = (dateStr?: string): string => {
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="photo" class="photo-modal" @click.self="emit('close')">
-        <button class="photo-modal__close" @click="emit('close')">✕</button>
+      <div v-if="photo" class="photo-modal" @click.self="handleClose">
+        <button class="photo-modal__close" @click="handleClose">✕</button>
 
         <div class="photo-modal__content">
-          <!-- Imagem -->
-          <div class="photo-modal__image-container">
+          <!-- Container de mídia -->
+          <div class="photo-modal__media-container">
+            <!-- Vídeo -->
+            <video
+              v-if="isVideo"
+              ref="videoRef"
+              :src="photo.public_url"
+              :poster="photo.poster_url"
+              class="photo-modal__video"
+              controls
+              playsinline
+            >
+              Seu navegador não suporta vídeos.
+            </video>
+
+            <!-- Imagem -->
             <img
+              v-else
               :src="photo.public_url"
               :alt="photo.caption || 'Foto do casamento'"
               class="photo-modal__image"
@@ -99,6 +132,13 @@ const formatDate = (dateStr?: string): string => {
                   {{ formatDate(photo.created_at) }}
                 </span>
               </div>
+              <!-- Badge de tipo de mídia -->
+              <span class="photo-modal__media-badge" :class="{ 'photo-modal__media-badge--video': isVideo }">
+                {{ isVideo ? '🎥' : '📷' }} {{ mediaLabel }}
+                <template v-if="isVideo && photo.duration">
+                  ({{ formatDuration(photo.duration) }})
+                </template>
+              </span>
             </div>
 
             <!-- Caption -->
@@ -183,7 +223,7 @@ const formatDate = (dateStr?: string): string => {
   overflow: hidden;
 }
 
-.photo-modal__image-container {
+.photo-modal__media-container {
   flex: 1;
   display: flex;
   align-items: center;
@@ -198,6 +238,13 @@ const formatDate = (dateStr?: string): string => {
   object-fit: contain;
 }
 
+.photo-modal__video {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  outline: none;
+}
+
 .photo-modal__sidebar {
   width: 350px;
   display: flex;
@@ -208,11 +255,33 @@ const formatDate = (dateStr?: string): string => {
 .photo-modal__header {
   padding: 1rem;
   border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 .photo-modal__author {
   display: flex;
   flex-direction: column;
+}
+
+.photo-modal__media-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  background: #f3f4f6;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.photo-modal__media-badge--video {
+  background: #fef3c7;
+  color: #d97706;
 }
 
 .photo-modal__author-name {
@@ -300,7 +369,12 @@ const formatDate = (dateStr?: string): string => {
     max-height: 95vh;
   }
 
-  .photo-modal__image-container {
+  .photo-modal__media-container {
+    max-height: 50vh;
+  }
+
+  .photo-modal__video,
+  .photo-modal__image {
     max-height: 50vh;
   }
 

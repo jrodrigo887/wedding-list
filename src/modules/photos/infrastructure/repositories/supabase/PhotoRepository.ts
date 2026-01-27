@@ -7,6 +7,8 @@ import type {
   PhotoStats,
   PhotoComment,
   PhotoCommentForm,
+  MediaUploadData,
+  GuestMediaCount,
 } from '../../../domain/entities'
 import { storageService, compressImage } from '../../services'
 
@@ -20,6 +22,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
   private readonly LIKES_TABLE = 'foto_likes'
   private readonly COMMENTS_TABLE = 'foto_comentarios'
   private readonly MAX_PHOTOS_PER_GUEST = 20
+  private readonly MAX_VIDEOS_PER_GUEST = 5
   readonly tenantId: string
 
   constructor(tenantId: string) {
@@ -146,6 +149,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
           caption: uploadData.caption || null,
           aprovado: shouldAutoApprove,
           tenant_id: this.tenantId,
+          media_type: 'photo',
         })
         .select()
         .single()
@@ -174,6 +178,109 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
     }
   }
 
+  async uploadVideo(uploadData: MediaUploadData): Promise<PhotoUploadResponse> {
+    console.log('repository video upload.')
+
+    const mediaCount = await this.getGuestMediaCount(uploadData.codigo_convidado)
+    if (mediaCount.videos >= this.MAX_VIDEOS_PER_GUEST) {
+      return {
+        success: false,
+        message: `Limite de ${this.MAX_VIDEOS_PER_GUEST} vídeos atingido`,
+      }
+    }
+
+    let storagePath: string | null = null
+    let posterPath: string | null = null
+
+    try {
+      // 1. Faz upload do vídeo
+      storagePath = await storageService.uploadVideo(
+        uploadData.file,
+        uploadData.codigo_convidado
+      )
+
+      // 2. Faz upload do poster (se disponível)
+      if (uploadData.posterBlob) {
+        posterPath = await storageService.uploadPoster(
+          uploadData.posterBlob,
+          uploadData.codigo_convidado,
+          uploadData.file.name
+        )
+      }
+
+      // 3. Verifica se deve auto-aprovar
+      const shouldAutoApprove = this.shouldAutoApprove()
+
+      // 4. Insere no banco
+      const { data, error } = await supabase
+        .from(this.TABLE)
+        .insert({
+          codigo_convidado: uploadData.codigo_convidado,
+          nome_convidado: uploadData.nome_convidado,
+          storage_path: storagePath,
+          original_filename: uploadData.file.name,
+          file_size: uploadData.file.size,
+          mime_type: uploadData.file.type,
+          caption: uploadData.caption || null,
+          aprovado: shouldAutoApprove,
+          tenant_id: this.tenantId,
+          media_type: 'video',
+          duration: uploadData.duration || null,
+          poster_path: posterPath,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        // Rollback: deleta arquivos do storage
+        if (storagePath) await storageService.deletePhoto(storagePath)
+        if (posterPath) await storageService.deletePhoto(posterPath)
+        throw new Error(error.message)
+      }
+
+      const photo = this.mapPhotoWithUrl(data)
+
+      return {
+        success: true,
+        message: shouldAutoApprove
+          ? 'Vídeo enviado com sucesso!'
+          : 'Vídeo enviado! Aguardando aprovação.',
+        photo,
+      }
+    } catch (err) {
+      console.error('[PhotoRepositorySupabase] Erro ao fazer upload de vídeo:', err)
+      // Cleanup em caso de erro
+      if (storagePath) {
+        try { await storageService.deletePhoto(storagePath) } catch { /* ignore */ }
+      }
+      if (posterPath) {
+        try { await storageService.deletePhoto(posterPath) } catch { /* ignore */ }
+      }
+      return {
+        success: false,
+        message: err instanceof Error ? err.message : 'Erro ao enviar vídeo',
+      }
+    }
+  }
+
+  async getGuestMediaCount(codigo: string): Promise<GuestMediaCount> {
+    const { data, error } = await supabase
+      .from(this.TABLE)
+      .select('media_type')
+      .eq('tenant_id', this.tenantId)
+      .ilike('codigo_convidado', codigo)
+
+    if (error) {
+      console.error('[PhotoRepositorySupabase] Erro ao contar mídia do convidado:', error)
+      return { photos: 0, videos: 0 }
+    }
+
+    const photos = (data || []).filter((item) => item.media_type === 'photo' || !item.media_type).length
+    const videos = (data || []).filter((item) => item.media_type === 'video').length
+
+    return { photos, videos }
+  }
+
   async deletePhoto(id: number): Promise<void> {
     // Busca a foto para obter o storage_path
     const photo = await this.getPhotoById(id)
@@ -183,6 +290,15 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
 
     // Deleta do Storage
     await storageService.deletePhoto(photo.storage_path)
+
+    // Deleta o poster se existir (para vídeos)
+    if (photo.poster_path) {
+      try {
+        await storageService.deletePhoto(photo.poster_path)
+      } catch {
+        // Ignora erro ao deletar poster
+      }
+    }
 
     // Deleta do banco (cascata deleta likes e comentários)
     const { error } = await supabase
@@ -355,7 +471,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
   // ========== ESTATÍSTICAS ==========
 
   async getStats(): Promise<PhotoStats> {
-    const [totalResult, approvedResult, likesResult, commentsResult] = await Promise.all([
+    const [totalResult, approvedResult, likesResult, commentsResult, photosResult, videosResult] = await Promise.all([
       supabase
         .from(this.TABLE)
         .select('*', { count: 'exact', head: true })
@@ -373,6 +489,16 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
         .from(this.COMMENTS_TABLE)
         .select('*', { count: 'exact', head: true })
         .eq('tenant_id', this.tenantId),
+      supabase
+        .from(this.TABLE)
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId)
+        .eq('media_type', 'photo'),
+      supabase
+        .from(this.TABLE)
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', this.tenantId)
+        .eq('media_type', 'video'),
     ])
 
     const total = totalResult.count || 0
@@ -384,6 +510,8 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       pending: total - approved,
       totalLikes: likesResult.count || 0,
       totalComments: commentsResult.count || 0,
+      totalPhotos: photosResult.count || 0,
+      totalVideos: videosResult.count || 0,
     }
   }
 
@@ -393,6 +521,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', this.tenantId)
       .ilike('codigo_convidado', codigo)
+      .eq('media_type', 'photo')
 
     if (error) {
       console.error('[PhotoRepositorySupabase] Erro ao contar fotos do convidado:', error)
@@ -435,6 +564,7 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
    */
   private mapPhotoWithUrl(data: Record<string, unknown>): Photo {
     const storagePath = data.storage_path as string
+    const posterPath = data.poster_path as string | undefined
     return {
       id: data.id as number,
       codigo_convidado: data.codigo_convidado as string,
@@ -448,7 +578,13 @@ export class PhotoRepositorySupabase implements IPhotoRepository {
       aprovado: data.aprovado as boolean,
       created_at: data.created_at as string | undefined,
       updated_at: data.updated_at as string | undefined,
+      // Campos de vídeo
+      media_type: (data.media_type as 'photo' | 'video') || 'photo',
+      duration: data.duration as number | undefined,
+      poster_path: posterPath,
+      // URLs computadas
       public_url: storageService.getPublicUrl(storagePath),
+      poster_url: posterPath ? storageService.getPublicUrl(posterPath) : undefined,
       likes_count: 0,
       comments_count: 0,
       user_liked: false,

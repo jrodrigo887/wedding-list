@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { usePhotosStore } from '../../infrastructure/stores';
+import { formatDuration } from '../../infrastructure/services/videoCompressor';
+import type { Photo } from '../../domain/entities';
 
 /**
  * Component: PhotoModeration
- * Painel de moderação de fotos para admin
+ * Painel de moderação de fotos e vídeos para admin
  */
 
 const store = usePhotosStore();
@@ -38,7 +40,9 @@ const handleApprove = async (id: number) => {
 };
 
 const handleReject = async (id: number) => {
-  if (confirm('Tem certeza que deseja rejeitar esta foto? Ela será excluída.')) {
+  const item = store.pendingPhotos.find((p) => p.id === id);
+  const itemType = item?.media_type === 'video' ? 'vídeo' : 'foto';
+  if (confirm(`Tem certeza que deseja rejeitar ${itemType === 'vídeo' ? 'este' : 'esta'} ${itemType}? ${itemType === 'vídeo' ? 'Ele' : 'Ela'} será ${itemType === 'vídeo' ? 'excluído' : 'excluída'}.`)) {
     await store.rejectPhoto(id);
     selectedIds.value = selectedIds.value.filter((i) => i !== id);
   }
@@ -62,6 +66,15 @@ const formatDate = (dateStr?: string): string => {
     minute: '2-digit',
   });
 };
+
+const isVideo = (photo: Photo): boolean => photo.media_type === 'video';
+
+const getMediaSrc = (photo: Photo): string => {
+  if (isVideo(photo)) {
+    return photo.poster_url || photo.public_url || '';
+  }
+  return photo.public_url || '';
+};
 </script>
 
 <template>
@@ -69,7 +82,7 @@ const formatDate = (dateStr?: string): string => {
     <!-- Header -->
     <div class="photo-moderation__header">
       <h3 class="photo-moderation__title">
-        Fotos Pendentes ({{ store.pendingPhotos.length }})
+        Mídia Pendente ({{ store.pendingPhotos.length }})
       </h3>
 
       <div v-if="store.pendingPhotos.length > 0" class="photo-moderation__actions">
@@ -79,7 +92,7 @@ const formatDate = (dateStr?: string): string => {
             :checked="selectedIds.length === store.pendingPhotos.length"
             @change="selectAll"
           />
-          Selecionar todas
+          Selecionar todos
         </label>
 
         <button
@@ -88,7 +101,7 @@ const formatDate = (dateStr?: string): string => {
           :disabled="approving"
           @click="handleBulkApprove"
         >
-          {{ approving ? 'Aprovando...' : `Aprovar ${selectedIds.length} foto(s)` }}
+          {{ approving ? 'Aprovando...' : `Aprovar ${selectedIds.length} item(s)` }}
         </button>
       </div>
     </div>
@@ -99,21 +112,21 @@ const formatDate = (dateStr?: string): string => {
       :class="{ 'photo-moderation__status--auto': store.isAutoApproveEnabled }"
     >
       <span v-if="store.isAutoApproveEnabled">
-        Modo automático ativo - novas fotos são aprovadas instantaneamente
+        Modo automático ativo - novas mídias são aprovadas instantaneamente
       </span>
       <span v-else>
-        Modo moderação ativo - fotos precisam de aprovação manual
+        Modo moderação ativo - fotos e vídeos precisam de aprovação manual
       </span>
     </div>
 
     <!-- Loading -->
     <div v-if="store.loading" class="photo-moderation__loading">
-      Carregando fotos pendentes...
+      Carregando mídia pendente...
     </div>
 
     <!-- Empty -->
     <div v-else-if="!store.hasPendingPhotos" class="photo-moderation__empty">
-      Nenhuma foto pendente de aprovação
+      Nenhuma mídia pendente de aprovação
     </div>
 
     <!-- Grid -->
@@ -132,14 +145,33 @@ const formatDate = (dateStr?: string): string => {
           />
         </div>
 
-        <img
-          :src="photo.public_url"
-          :alt="photo.caption || 'Foto'"
-          class="photo-moderation__image"
-        />
+        <div class="photo-moderation__media-wrapper">
+          <img
+            :src="getMediaSrc(photo)"
+            :alt="photo.caption || (isVideo(photo) ? 'Vídeo' : 'Foto')"
+            class="photo-moderation__image"
+          />
+
+          <!-- Indicadores de vídeo -->
+          <template v-if="isVideo(photo)">
+            <div class="photo-moderation__play-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+            <div v-if="photo.duration" class="photo-moderation__duration">
+              {{ formatDuration(photo.duration) }}
+            </div>
+          </template>
+        </div>
 
         <div class="photo-moderation__info">
-          <span class="photo-moderation__author">{{ photo.nome_convidado }}</span>
+          <div class="photo-moderation__info-header">
+            <span class="photo-moderation__author">{{ photo.nome_convidado }}</span>
+            <span class="photo-moderation__type-badge" :class="{ 'photo-moderation__type-badge--video': isVideo(photo) }">
+              {{ isVideo(photo) ? '🎥' : '📷' }}
+            </span>
+          </div>
           <span class="photo-moderation__date">{{ formatDate(photo.created_at) }}</span>
           <p v-if="photo.caption" class="photo-moderation__caption">
             {{ photo.caption }}
@@ -272,14 +304,58 @@ const formatDate = (dateStr?: string): string => {
   cursor: pointer;
 }
 
+.photo-moderation__media-wrapper {
+  position: relative;
+}
+
 .photo-moderation__image {
   width: 100%;
   height: 180px;
   object-fit: cover;
 }
 
+.photo-moderation__play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+}
+
+.photo-moderation__duration {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  padding: 0.125rem 0.375rem;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  border-radius: 0.25rem;
+}
+
 .photo-moderation__info {
   padding: 0.75rem;
+}
+
+.photo-moderation__info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.photo-moderation__type-badge {
+  font-size: 0.875rem;
+}
+
+.photo-moderation__type-badge--video {
+  animation: pulse 2s infinite;
 }
 
 .photo-moderation__author {

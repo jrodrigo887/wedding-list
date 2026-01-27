@@ -4,6 +4,7 @@ import type {
   Photo,
   PhotoStats,
   PhotoComment,
+  MediaType,
 } from '../../domain/entities';
 import { createEmptyPhotoStats } from '../../domain/entities';
 import { photoRepository } from '../repositories';
@@ -27,6 +28,15 @@ export const usePhotosStore = defineStore('photos', () => {
   const currentGuestCode = ref<string | null>(null);
   const currentGuestName = ref<string | null>(null);
   const currentGuestPhotoCount = ref(0);
+  const currentGuestVideoCount = ref(0);
+
+  // Filtro de mídia
+  const mediaFilter = ref<'all' | 'photo' | 'video'>('all');
+
+  // Paginação
+  const PAGE_SIZE = 20;
+  const hasMore = ref(true);
+  const loadingMore = ref(false);
 
   // Cache
   const lastFetch = ref<number | null>(null);
@@ -41,6 +51,14 @@ export const usePhotosStore = defineStore('photos', () => {
   const hasPendingPhotos = computed(() => pendingPhotos.value.length > 0);
   const canUploadMore = computed(() => currentGuestPhotoCount.value < 20);
   const remainingUploads = computed(() => 20 - currentGuestPhotoCount.value);
+  const canUploadMoreVideos = computed(() => currentGuestVideoCount.value < 5);
+  const remainingVideoUploads = computed(() => 5 - currentGuestVideoCount.value);
+
+  // Mídia filtrada
+  const filteredMedia = computed(() => {
+    if (mediaFilter.value === 'all') return photos.value;
+    return photos.value.filter((p) => p.media_type === mediaFilter.value);
+  });
 
   const isAutoApproveEnabled = computed(() => {
     const weddingDateStr = import.meta.env.VITE_WEDDING_DATE;
@@ -54,9 +72,9 @@ export const usePhotosStore = defineStore('photos', () => {
 
   const moderationStatus = computed(() => {
     if (isAutoApproveEnabled.value) {
-      return 'Fotos aparecem automaticamente no feed';
+      return 'Fotos e vídeos aparecem automaticamente no feed';
     }
-    return 'Fotos precisam de aprovação antes de aparecer';
+    return 'Fotos e vídeos precisam de aprovação antes de aparecer';
   });
 
   // ========== ACTIONS ==========
@@ -81,10 +99,18 @@ export const usePhotosStore = defineStore('photos', () => {
     currentGuestCode.value = null;
     currentGuestName.value = null;
     currentGuestPhotoCount.value = 0;
+    currentGuestVideoCount.value = 0;
   };
 
   /**
-   * Busca fotos aprovadas para o feed
+   * Define o filtro de mídia
+   */
+  const setMediaFilter = (filter: 'all' | 'photo' | 'video') => {
+    mediaFilter.value = filter;
+  };
+
+  /**
+   * Busca fotos aprovadas para o feed (primeira página)
    */
   const fetchApprovedPhotos = async (force = false): Promise<void> => {
     if (!force && !shouldRefetch() && photos.value.length > 0) return;
@@ -93,7 +119,7 @@ export const usePhotosStore = defineStore('photos', () => {
     error.value = null;
 
     try {
-      const fetchedPhotos = await photoRepository.getApprovedPhotos();
+      const fetchedPhotos = await photoRepository.getApprovedPhotos(PAGE_SIZE, 0);
 
       // Busca likes e comentários para cada foto
       if (currentGuestCode.value) {
@@ -107,6 +133,7 @@ export const usePhotosStore = defineStore('photos', () => {
       }
 
       photos.value = fetchedPhotos;
+      hasMore.value = fetchedPhotos.length >= PAGE_SIZE;
       lastFetch.value = Date.now();
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro ao carregar fotos';
@@ -117,15 +144,48 @@ export const usePhotosStore = defineStore('photos', () => {
   };
 
   /**
-   * Busca contagem de fotos do convidado atual
+   * Carrega mais fotos (próxima página)
+   */
+  const fetchMorePhotos = async (): Promise<void> => {
+    if (loadingMore.value || !hasMore.value) return;
+
+    loadingMore.value = true;
+
+    try {
+      const offset = photos.value.length;
+      const fetchedPhotos = await photoRepository.getApprovedPhotos(PAGE_SIZE, offset);
+
+      if (currentGuestCode.value) {
+        for (const photo of fetchedPhotos) {
+          photo.user_liked = await photoRepository.hasUserLiked(
+            photo.id!,
+            currentGuestCode.value
+          );
+          photo.likes_count = await photoRepository.getPhotoLikes(photo.id!);
+        }
+      }
+
+      photos.value.push(...fetchedPhotos);
+      hasMore.value = fetchedPhotos.length >= PAGE_SIZE;
+    } catch (err) {
+      console.error('[PhotosStore] Erro ao carregar mais fotos:', err);
+    } finally {
+      loadingMore.value = false;
+    }
+  };
+
+  /**
+   * Busca contagem de fotos e vídeos do convidado atual
    */
   const fetchGuestPhotoCount = async (): Promise<void> => {
     if (!currentGuestCode.value) return;
 
     try {
-      currentGuestPhotoCount.value = await photoRepository.getGuestPhotoCount(
+      const mediaCount = await photoRepository.getGuestMediaCount(
         currentGuestCode.value
       );
+      currentGuestPhotoCount.value = mediaCount.photos;
+      currentGuestVideoCount.value = mediaCount.videos;
     } catch (err) {
       console.error('[PhotosStore] Erro ao buscar contagem:', err);
     }
@@ -174,6 +234,91 @@ export const usePhotosStore = defineStore('photos', () => {
       return true;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro ao enviar foto';
+      return false;
+    } finally {
+      uploading.value = false;
+    }
+  };
+
+  /**
+   * Faz upload de mídia (foto ou vídeo) - unificado
+   */
+  const uploadMedia = async (
+    file: File,
+    caption?: string,
+    options?: {
+      media_type: MediaType;
+      duration?: number;
+      posterBlob?: Blob;
+    }
+  ): Promise<boolean> => {
+    if (!currentGuestCode.value || !currentGuestName.value) {
+      error.value = 'Identifique-se antes de enviar';
+      return false;
+    }
+
+    const mediaType = options?.media_type || 'photo';
+
+    // Verifica limites
+    if (mediaType === 'photo' && !canUploadMore.value) {
+      error.value = 'Limite de 20 fotos atingido';
+      return false;
+    }
+
+    if (mediaType === 'video' && !canUploadMoreVideos.value) {
+      error.value = 'Limite de 5 vídeos atingido';
+      return false;
+    }
+
+    uploading.value = true;
+    uploadProgress.value = 0;
+    error.value = null;
+
+    try {
+      let result;
+
+      if (mediaType === 'video') {
+        result = await photoRepository.uploadVideo({
+          codigo_convidado: currentGuestCode.value,
+          nome_convidado: currentGuestName.value,
+          file,
+          caption,
+          media_type: 'video',
+          duration: options?.duration,
+          posterBlob: options?.posterBlob,
+        });
+
+        if (result.success) {
+          currentGuestVideoCount.value++;
+        }
+      } else {
+        result = await photoRepository.uploadPhoto({
+          codigo_convidado: currentGuestCode.value,
+          nome_convidado: currentGuestName.value,
+          file,
+          caption,
+        });
+
+        if (result.success) {
+          currentGuestPhotoCount.value++;
+        }
+      }
+
+      if (!result.success) {
+        error.value = result.message;
+        return false;
+      }
+
+      uploadProgress.value = 100;
+
+      // Se auto-aprovado, adiciona ao feed
+      if (result.photo?.aprovado) {
+        photos.value.unshift(result.photo);
+      }
+
+      return true;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Erro ao enviar mídia';
       return false;
     } finally {
       uploading.value = false;
@@ -403,8 +548,12 @@ export const usePhotosStore = defineStore('photos', () => {
     currentGuestCode.value = null;
     currentGuestName.value = null;
     currentGuestPhotoCount.value = 0;
+    currentGuestVideoCount.value = 0;
+    mediaFilter.value = 'all';
     selectedPhoto.value = null;
     selectedPhotoComments.value = [];
+    hasMore.value = true;
+    loadingMore.value = false;
     lastFetch.value = null;
     error.value = null;
   };
@@ -415,12 +564,16 @@ export const usePhotosStore = defineStore('photos', () => {
     pendingPhotos,
     stats,
     loading,
+    loadingMore,
     uploading,
     uploadProgress,
     error,
     currentGuestCode,
     currentGuestName,
     currentGuestPhotoCount,
+    currentGuestVideoCount,
+    mediaFilter,
+    hasMore,
     selectedPhoto,
     selectedPhotoComments,
     // Computed
@@ -428,14 +581,20 @@ export const usePhotosStore = defineStore('photos', () => {
     hasPendingPhotos,
     canUploadMore,
     remainingUploads,
+    canUploadMoreVideos,
+    remainingVideoUploads,
+    filteredMedia,
     isAutoApproveEnabled,
     moderationStatus,
     // Actions
     setGuestContext,
     clearGuestContext,
+    setMediaFilter,
     fetchApprovedPhotos,
+    fetchMorePhotos,
     fetchGuestPhotoCount,
     uploadPhoto,
+    uploadMedia,
     toggleLike,
     addComment,
     fetchPhotoComments,

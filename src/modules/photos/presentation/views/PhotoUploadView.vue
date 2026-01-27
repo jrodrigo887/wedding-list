@@ -3,11 +3,11 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { supabase } from '@/services/supabase';
 import { usePhotosStore } from '../../infrastructure/stores';
-import { PhotoUploader } from '../components';
+import { MediaUploader } from '../components';
 
 /**
  * View: PhotoUploadView
- * Página de upload de fotos
+ * Página de upload de fotos e vídeos
  */
 
 const router = useRouter();
@@ -30,6 +30,10 @@ onMounted(async () => {
   }
 });
 
+const getFullCode = () => {
+  return 'RE' + guestCode.value.trim();
+};
+
 const handleIdentify = async () => {
   if (!guestCode.value.trim()) {
     identifyError.value = 'Digite seu código';
@@ -43,7 +47,7 @@ const handleIdentify = async () => {
     const { data, error } = await supabase
       .from('convidados')
       .select('codigo, nome')
-      .ilike('codigo', guestCode.value.trim())
+      .ilike('codigo', getFullCode())
       .single();
 
     if (error || !data) {
@@ -77,7 +81,7 @@ const goToFeed = () => {
         <button class="photo-upload-view__back" @click="goToFeed">
           ← Voltar para galeria
         </button>
-        <h1 class="photo-upload-view__title">Enviar Foto</h1>
+        <h1 class="photo-upload-view__title">Enviar Foto ou Vídeo</h1>
         <p class="photo-upload-view__subtitle">
           Compartilhe seus momentos especiais conosco
         </p>
@@ -88,7 +92,7 @@ const goToFeed = () => {
         <div class="photo-upload-view__identify-card">
           <h2 class="photo-upload-view__identify-title">Identifique-se</h2>
           <p class="photo-upload-view__identify-text">
-            Digite o código do seu convite para enviar fotos
+            Digite o código do seu convite para enviar fotos e vídeos
           </p>
 
           <div class="photo-upload-view__identify-form">
@@ -122,19 +126,17 @@ const goToFeed = () => {
       <main v-else class="photo-upload-view__main">
         <div class="photo-upload-view__user-info">
           <span>Enviando como: <strong>{{ store.currentGuestName }}</strong></span>
-          <span class="photo-upload-view__count">
-            {{ store.currentGuestPhotoCount }}/20 fotos enviadas
-          </span>
         </div>
 
-        <PhotoUploader />
+        <MediaUploader />
 
         <div class="photo-upload-view__tips">
           <h3>Dicas</h3>
           <ul>
-            <li>Fotos são comprimidas automaticamente para envio mais rápido</li>
-            <li>Você pode enviar até 20 fotos</li>
-            <li>Adicione uma legenda para contar a história da foto</li>
+            <li>Fotos e vídeos são comprimidos automaticamente para envio mais rápido</li>
+            <li>Você pode enviar até 20 fotos e 5 vídeos</li>
+            <li>Vídeos têm duração máxima de 60 segundos</li>
+            <li>Adicione uma legenda para contar a história</li>
           </ul>
         </div>
       </main>
@@ -282,17 +284,13 @@ const goToFeed = () => {
 
 .photo-upload-view__user-info {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 1rem;
   background: white;
   border-radius: 0.5rem;
   font-size: 0.875rem;
   color: #374151;
-}
-
-.photo-upload-view__count {
-  color: #6b7280;
 }
 
 .photo-upload-view__tips {

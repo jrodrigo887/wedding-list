@@ -7,6 +7,8 @@ import type {
   PhotoStats,
   PhotoComment,
   PhotoCommentForm,
+  MediaUploadData,
+  GuestMediaCount,
 } from '../../domain/entities';
 import { storageService, compressImage } from '../services';
 
@@ -20,6 +22,7 @@ export class PhotoRepository implements IPhotoRepository {
   private readonly LIKES_TABLE = 'foto_likes';
   private readonly COMMENTS_TABLE = 'foto_comentarios';
   private readonly MAX_PHOTOS_PER_GUEST = 20;
+  private readonly MAX_VIDEOS_PER_GUEST = 5;
 
   // ========== CRUD DE FOTOS ==========
 
@@ -336,7 +339,7 @@ export class PhotoRepository implements IPhotoRepository {
   // ========== ESTATÍSTICAS ==========
 
   async getStats(): Promise<PhotoStats> {
-    const [totalResult, approvedResult, likesResult, commentsResult] =
+    const [totalResult, approvedResult, likesResult, commentsResult, photosResult, videosResult] =
       await Promise.all([
         supabase.from(this.TABLE).select('*', { count: 'exact', head: true }),
         supabase
@@ -349,6 +352,14 @@ export class PhotoRepository implements IPhotoRepository {
         supabase
           .from(this.COMMENTS_TABLE)
           .select('*', { count: 'exact', head: true }),
+        supabase
+          .from(this.TABLE)
+          .select('*', { count: 'exact', head: true })
+          .eq('media_type', 'photo'),
+        supabase
+          .from(this.TABLE)
+          .select('*', { count: 'exact', head: true })
+          .eq('media_type', 'video'),
       ]);
 
     const total = totalResult.count || 0;
@@ -360,6 +371,8 @@ export class PhotoRepository implements IPhotoRepository {
       pending: total - approved,
       totalLikes: likesResult.count || 0,
       totalComments: commentsResult.count || 0,
+      totalPhotos: photosResult.count || 0,
+      totalVideos: videosResult.count || 0,
     };
   }
 
@@ -367,7 +380,8 @@ export class PhotoRepository implements IPhotoRepository {
     const { count, error } = await supabase
       .from(this.TABLE)
       .select('*', { count: 'exact', head: true })
-      .ilike('codigo_convidado', codigo);
+      .ilike('codigo_convidado', codigo)
+      .eq('media_type', 'photo');
 
     if (error) {
       console.error(
@@ -378,6 +392,101 @@ export class PhotoRepository implements IPhotoRepository {
     }
 
     return count || 0;
+  }
+
+  async getGuestMediaCount(codigo: string): Promise<GuestMediaCount> {
+    const [photosResult, videosResult] = await Promise.all([
+      supabase
+        .from(this.TABLE)
+        .select('*', { count: 'exact', head: true })
+        .ilike('codigo_convidado', codigo)
+        .eq('media_type', 'photo'),
+      supabase
+        .from(this.TABLE)
+        .select('*', { count: 'exact', head: true })
+        .ilike('codigo_convidado', codigo)
+        .eq('media_type', 'video'),
+    ]);
+
+    return {
+      photos: photosResult.count || 0,
+      videos: videosResult.count || 0,
+    };
+  }
+
+  async uploadVideo(data: MediaUploadData): Promise<PhotoUploadResponse> {
+    // Verifica limite de vídeos
+    const { videos } = await this.getGuestMediaCount(data.codigo_convidado);
+    if (videos >= this.MAX_VIDEOS_PER_GUEST) {
+      return {
+        success: false,
+        message: `Limite de ${this.MAX_VIDEOS_PER_GUEST} vídeos por convidado atingido`,
+      };
+    }
+
+    try {
+      // Faz upload do vídeo
+      const videoPath = await storageService.uploadVideo(
+        data.file,
+        data.codigo_convidado,
+        data.file.name
+      );
+
+      // Faz upload do poster se fornecido
+      let posterPath: string | undefined;
+      if (data.posterBlob) {
+        try {
+          posterPath = await storageService.uploadPoster(
+            data.posterBlob,
+            data.codigo_convidado,
+            data.file.name
+          );
+        } catch (posterError) {
+          console.warn('[PhotoRepository] Erro ao fazer upload do poster:', posterError);
+        }
+      }
+
+      // Salva registro no banco
+      const { data: foto, error } = await supabase
+        .from(this.TABLE)
+        .insert({
+          codigo_convidado: data.codigo_convidado,
+          nome_convidado: data.nome_convidado,
+          storage_path: videoPath,
+          poster_path: posterPath,
+          original_filename: data.file.name,
+          file_size: data.file.size,
+          mime_type: data.file.type,
+          caption: data.caption,
+          media_type: 'video',
+          duration: data.duration,
+          aprovado: this.shouldAutoApprove(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[PhotoRepository] Erro ao salvar vídeo:', error);
+        return {
+          success: false,
+          message: 'Erro ao salvar vídeo',
+        };
+      }
+
+      return {
+        success: true,
+        message: foto.aprovado
+          ? 'Vídeo enviado e publicado!'
+          : 'Vídeo enviado! Aguardando aprovação.',
+        photo: this.mapPhotoWithUrl(foto),
+      };
+    } catch (err) {
+      console.error('[PhotoRepository] Erro no upload de vídeo:', err);
+      return {
+        success: false,
+        message: err instanceof Error ? err.message : 'Erro ao fazer upload do vídeo',
+      };
+    }
   }
 
   // ========== DOWNLOAD ==========
@@ -413,6 +522,7 @@ export class PhotoRepository implements IPhotoRepository {
    */
   private mapPhotoWithUrl(data: Record<string, unknown>): Photo {
     const storagePath = data.storage_path as string;
+    const posterPath = data.poster_path as string | undefined;
     return {
       id: data.id as number,
       codigo_convidado: data.codigo_convidado as string,
@@ -426,7 +536,11 @@ export class PhotoRepository implements IPhotoRepository {
       aprovado: data.aprovado as boolean,
       created_at: data.created_at as string | undefined,
       updated_at: data.updated_at as string | undefined,
+      media_type: (data.media_type as 'photo' | 'video') || 'photo',
+      duration: data.duration as number | undefined,
+      poster_path: posterPath,
       public_url: storageService.getPublicUrl(storagePath),
+      poster_url: posterPath ? storageService.getPublicUrl(posterPath) : undefined,
       likes_count: 0,
       comments_count: 0,
       user_liked: false,

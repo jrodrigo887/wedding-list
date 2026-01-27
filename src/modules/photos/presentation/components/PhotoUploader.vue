@@ -1,75 +1,149 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { usePhotoUpload } from '../../infrastructure/composables';
 import { usePhotosStore } from '../../infrastructure/stores';
 import UploadProgress from './UploadProgress.vue';
 
 /**
  * Component: PhotoUploader
- * Interface de upload de fotos mobile-first
+ * Interface de upload de fotos mobile-first com suporte a múltiplos arquivos
  */
+
+interface FileItem {
+  file: File;
+  previewUrl: string;
+}
 
 const store = usePhotosStore();
 const {
   compressing,
   compressionProgress,
-  previewUrl,
-  originalSize,
-  compressedSize,
-  generatePreview,
   clearPreview,
   uploadWithCompression,
   validateFile,
 } = usePhotoUpload();
 
 const fileInput = ref<HTMLInputElement | null>(null);
-const selectedFile = ref<File | null>(null);
+const selectedFiles = ref<FileItem[]>([]);
 const caption = ref('');
 const error = ref('');
 const success = ref(false);
+const isDragging = ref(false);
+const uploading = ref(false);
+const uploadCurrent = ref(0);
+const uploadTotal = ref(0);
+
+const hasFiles = computed(() => selectedFiles.value.length > 0);
 
 const triggerFileInput = () => {
   fileInput.value?.click();
 };
 
-const handleFileSelect = (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-
-  if (!file) return;
-
+const processFiles = (files: FileList | File[]) => {
   error.value = '';
   success.value = false;
 
-  const validation = validateFile(file);
-  if (!validation.valid) {
-    error.value = validation.error || 'Arquivo inválido';
+  const remaining = store.remainingUploads - selectedFiles.value.length;
+  if (remaining <= 0) {
+    error.value = 'Limite de fotos atingido';
     return;
   }
 
-  // Armazena o arquivo em um ref separado antes do input ser removido do DOM
-  selectedFile.value = file;
-  generatePreview(file);
+  const filesToAdd = Array.from(files).slice(0, remaining);
+  const errors: string[] = [];
+
+  for (const file of filesToAdd) {
+    const validation = validateFile(file);
+    if (!validation.valid) {
+      errors.push(`${file.name}: ${validation.error}`);
+      continue;
+    }
+
+    selectedFiles.value.push({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    });
+  }
+
+  if (errors.length > 0) {
+    error.value = errors.join('\n');
+  }
+};
+
+const handleFileSelect = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  if (!input.files?.length) return;
+  processFiles(input.files);
+  input.value = '';
+};
+
+const handleDragOver = (event: DragEvent) => {
+  event.preventDefault();
+  isDragging.value = true;
+};
+
+const handleDragLeave = () => {
+  isDragging.value = false;
+};
+
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault();
+  isDragging.value = false;
+
+  const files = event.dataTransfer?.files;
+  if (!files?.length) return;
+  processFiles(files);
+};
+
+const removeFile = (index: number) => {
+  const item = selectedFiles.value[index];
+  URL.revokeObjectURL(item.previewUrl);
+  selectedFiles.value.splice(index, 1);
 };
 
 const handleUpload = async () => {
-  if (!selectedFile.value) {
+  if (selectedFiles.value.length === 0) {
     error.value = 'Nenhum arquivo selecionado';
     return;
   }
 
   error.value = '';
-  const uploaded = await uploadWithCompression(selectedFile.value, caption.value);
+  uploading.value = true;
+  uploadTotal.value = selectedFiles.value.length;
+  uploadCurrent.value = 0;
 
-  if (uploaded) {
+  const filesToUpload = [...selectedFiles.value];
+  let successCount = 0;
+  const errors: string[] = [];
+
+  for (const item of filesToUpload) {
+    uploadCurrent.value++;
+    const uploaded = await uploadWithCompression(item.file, caption.value);
+
+    if (uploaded) {
+      successCount++;
+    } else {
+      errors.push(item.file.name);
+    }
+  }
+
+  uploading.value = false;
+
+  if (successCount > 0) {
     success.value = true;
     caption.value = '';
-    selectedFile.value = null;
+    // Limpa previews
+    for (const item of selectedFiles.value) {
+      URL.revokeObjectURL(item.previewUrl);
+    }
+    selectedFiles.value = [];
     setTimeout(() => {
       success.value = false;
     }, 3000);
-  } else {
-    error.value = store.error || 'Erro ao enviar foto';
+  }
+
+  if (errors.length > 0) {
+    error.value = `Erro ao enviar: ${errors.join(', ')}`;
   }
 };
 
@@ -77,88 +151,109 @@ const handleCancel = () => {
   clearPreview();
   caption.value = '';
   error.value = '';
-  selectedFile.value = null;
+  for (const item of selectedFiles.value) {
+    URL.revokeObjectURL(item.previewUrl);
+  }
+  selectedFiles.value = [];
 };
 </script>
 
 <template>
   <div class="photo-uploader">
-    <!-- Estado: Sem preview -->
+    <!-- Dropzone (sempre visível quando não está enviando) -->
     <div
-      v-if="!previewUrl"
+      v-if="!uploading"
       class="photo-uploader__dropzone"
+      :class="{ 'photo-uploader__dropzone--dragging': isDragging }"
       @click="triggerFileInput"
+      @dragover="handleDragOver"
+      @dragleave="handleDragLeave"
+      @drop="handleDrop"
     >
       <input
         ref="fileInput"
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic"
-        capture="environment"
+        multiple
         class="photo-uploader__input"
         @change="handleFileSelect"
       />
 
       <div class="photo-uploader__icon">📷</div>
-      <p class="photo-uploader__text">Toque para selecionar uma foto</p>
+      <p class="photo-uploader__text">
+        {{ isDragging ? 'Solte as fotos aqui' : 'Toque ou arraste fotos aqui' }}
+      </p>
       <p class="photo-uploader__hint">
         {{ store.remainingUploads }} fotos restantes
       </p>
     </div>
 
-    <!-- Estado: Com preview -->
-    <div v-else class="photo-uploader__preview">
-      <img :src="previewUrl" alt="Preview" class="photo-uploader__image" />
-
-      <div class="photo-uploader__info">
-        <p v-if="originalSize">
-          Tamanho original: <strong>{{ originalSize }}</strong>
-        </p>
-        <p v-if="compressedSize">
-          Após compressão: <strong>{{ compressedSize }}</strong>
-        </p>
+    <!-- Grid de previews -->
+    <div v-if="hasFiles && !uploading" class="photo-uploader__grid">
+      <div
+        v-for="(item, index) in selectedFiles"
+        :key="index"
+        class="photo-uploader__thumb"
+      >
+        <img :src="item.previewUrl" alt="Preview" class="photo-uploader__thumb-img" />
+        <button
+          type="button"
+          class="photo-uploader__thumb-remove"
+          @click.stop="removeFile(index)"
+        >
+          &times;
+        </button>
       </div>
+    </div>
 
-      <!-- Progresso de compressão/upload -->
+    <!-- Progresso de upload -->
+    <div v-if="uploading" class="photo-uploader__uploading">
       <UploadProgress
-        v-if="compressing || store.uploading"
         :progress="compressing ? compressionProgress : store.uploadProgress"
         :status="compressing ? 'compressing' : 'uploading'"
       />
+      <p class="photo-uploader__uploading-count">
+        Enviando {{ uploadCurrent }} de {{ uploadTotal }}
+      </p>
+    </div>
 
-      <!-- Formulário de legenda -->
-      <div v-if="!compressing && !store.uploading" class="photo-uploader__form">
-        <textarea
-          v-model="caption"
-          class="photo-uploader__caption"
-          placeholder="Adicione uma legenda (opcional)"
-          maxlength="200"
-          rows="2"
-        ></textarea>
+    <!-- Formulário de legenda e ações -->
+    <div v-if="hasFiles && !uploading" class="photo-uploader__form">
+      <p class="photo-uploader__count">
+        {{ selectedFiles.length }} foto{{ selectedFiles.length > 1 ? 's' : '' }} selecionada{{ selectedFiles.length > 1 ? 's' : '' }}
+      </p>
 
-        <div class="photo-uploader__actions">
-          <button
-            type="button"
-            class="photo-uploader__btn photo-uploader__btn--cancel"
-            @click="handleCancel"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            class="photo-uploader__btn photo-uploader__btn--upload"
-            :disabled="!store.canUploadMore"
-            @click="handleUpload"
-          >
-            Enviar Foto
-          </button>
-        </div>
+      <textarea
+        v-model="caption"
+        class="photo-uploader__caption"
+        placeholder="Adicione uma legenda (opcional)"
+        maxlength="200"
+        rows="2"
+      ></textarea>
+
+      <div class="photo-uploader__actions">
+        <button
+          type="button"
+          class="photo-uploader__btn photo-uploader__btn--cancel"
+          @click="handleCancel"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="photo-uploader__btn photo-uploader__btn--upload"
+          :disabled="!store.canUploadMore"
+          @click="handleUpload"
+        >
+          Enviar {{ selectedFiles.length }} foto{{ selectedFiles.length > 1 ? 's' : '' }}
+        </button>
       </div>
     </div>
 
     <!-- Mensagens -->
     <p v-if="error" class="photo-uploader__error">{{ error }}</p>
     <p v-if="success" class="photo-uploader__success">
-      Foto enviada com sucesso!
+      Fotos enviadas com sucesso!
     </p>
 
     <!-- Status de moderação -->
@@ -193,6 +288,13 @@ const handleCancel = () => {
   border-color: #c49a6c;
 }
 
+.photo-uploader__dropzone--dragging {
+  background: #faf4e8;
+  border-color: #c49a6c;
+  border-style: solid;
+  transform: scale(1.02);
+}
+
 .photo-uploader__input {
   display: none;
 }
@@ -214,32 +316,69 @@ const handleCancel = () => {
   margin: 0;
 }
 
-.photo-uploader__preview {
-  background: white;
-  border-radius: 1rem;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+.photo-uploader__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
-.photo-uploader__image {
+.photo-uploader__thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.photo-uploader__thumb-img {
   width: 100%;
-  max-height: 300px;
+  height: 100%;
   object-fit: cover;
 }
 
-.photo-uploader__info {
-  padding: 0.75rem 1rem;
-  background: #f9fafb;
-  font-size: 0.75rem;
+.photo-uploader__thumb-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.photo-uploader__thumb-remove:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.photo-uploader__uploading {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.photo-uploader__uploading-count {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
   color: #6b7280;
 }
 
-.photo-uploader__info p {
-  margin: 0.25rem 0;
+.photo-uploader__count {
+  font-size: 0.875rem;
+  color: #374151;
+  margin: 0 0 0.75rem 0;
+  text-align: center;
 }
 
 .photo-uploader__form {
-  padding: 1rem;
+  margin-top: 1rem;
 }
 
 .photo-uploader__caption {

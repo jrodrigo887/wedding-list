@@ -31,6 +31,7 @@ export function usePhotoRealtime() {
         (payload) => {
           const newPhoto = payload.new as Record<string, unknown>;
           const storagePath = newPhoto.storage_path as string;
+          const posterPath = newPhoto.poster_path as string | undefined;
 
           const photo: Photo = {
             id: newPhoto.id as number,
@@ -40,7 +41,13 @@ export function usePhotoRealtime() {
             caption: newPhoto.caption as string | undefined,
             aprovado: newPhoto.aprovado as boolean,
             created_at: newPhoto.created_at as string,
+            // Campos de vídeo
+            media_type: (newPhoto.media_type as 'photo' | 'video') || 'photo',
+            duration: newPhoto.duration as number | undefined,
+            poster_path: posterPath,
+            // URLs computadas
             public_url: storageService.getPublicUrl(storagePath),
+            poster_url: posterPath ? storageService.getPublicUrl(posterPath) : undefined,
             likes_count: 0,
             comments_count: 0,
             user_liked: false,
@@ -60,6 +67,7 @@ export function usePhotoRealtime() {
         (payload) => {
           const updatedPhoto = payload.new as Record<string, unknown>;
           const storagePath = updatedPhoto.storage_path as string;
+          const posterPath = updatedPhoto.poster_path as string | undefined;
 
           const photo: Photo = {
             id: updatedPhoto.id as number,
@@ -69,7 +77,13 @@ export function usePhotoRealtime() {
             caption: updatedPhoto.caption as string | undefined,
             aprovado: updatedPhoto.aprovado as boolean,
             created_at: updatedPhoto.created_at as string,
+            // Campos de vídeo
+            media_type: (updatedPhoto.media_type as 'photo' | 'video') || 'photo',
+            duration: updatedPhoto.duration as number | undefined,
+            poster_path: posterPath,
+            // URLs computadas
             public_url: storageService.getPublicUrl(storagePath),
+            poster_url: posterPath ? storageService.getPublicUrl(posterPath) : undefined,
           };
 
           store.handlePhotoUpdate(photo);

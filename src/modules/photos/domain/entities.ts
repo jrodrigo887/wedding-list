@@ -2,8 +2,13 @@
 // Todas as entidades do módulo de fotos
 
 /**
- * Entity: Photo
- * Representa uma foto enviada por um convidado
+ * Tipo de mídia suportado
+ */
+export type MediaType = 'photo' | 'video'
+
+/**
+ * Entity: Photo (Media)
+ * Representa uma foto ou vídeo enviado por um convidado
  */
 export interface Photo {
   id?: number
@@ -18,9 +23,14 @@ export interface Photo {
   aprovado: boolean
   created_at?: string
   updated_at?: string
+  // Campos de vídeo
+  media_type: MediaType
+  duration?: number // segundos, max 60
+  poster_path?: string // thumbnail do vídeo
   // Campos computados/junções
   public_url?: string
   thumbnail_url?: string
+  poster_url?: string // URL computada do poster
   likes_count?: number
   comments_count?: number
   user_liked?: boolean
@@ -34,6 +44,15 @@ export interface PhotoUploadData {
   nome_convidado: string
   file: File
   caption?: string
+}
+
+/**
+ * Dados para upload de mídia (foto ou vídeo)
+ */
+export interface MediaUploadData extends PhotoUploadData {
+  media_type: MediaType
+  duration?: number
+  posterBlob?: Blob
 }
 
 /**
@@ -54,6 +73,8 @@ export interface PhotoStats {
   pending: number
   totalLikes: number
   totalComments: number
+  totalPhotos: number
+  totalVideos: number
 }
 
 /**
@@ -65,7 +86,17 @@ export const createEmptyPhotoStats = (): PhotoStats => ({
   pending: 0,
   totalLikes: 0,
   totalComments: 0,
+  totalPhotos: 0,
+  totalVideos: 0,
 })
+
+/**
+ * Contagem de mídia por convidado
+ */
+export interface GuestMediaCount {
+  photos: number
+  videos: number
+}
 
 /**
  * Entity: PhotoLike

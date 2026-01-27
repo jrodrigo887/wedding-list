@@ -74,45 +74,51 @@ const formatDate = (dateStr?: string): string => {
 <style scoped>
 .photo-card {
   background: white;
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .photo-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 .photo-card__image-wrapper {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
+  background: #f3f4f6;
 }
 
 .photo-card__image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s;
+  transition: transform 0.4s ease;
 }
 
 .photo-card:hover .photo-card__image {
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
 .photo-card__overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.35) 0%,
+    transparent 50%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.25s ease;
 }
 
 .photo-card:hover .photo-card__overlay {
@@ -122,38 +128,42 @@ const formatDate = (dateStr?: string): string => {
 .photo-card__view-text {
   color: white;
   font-weight: 500;
-  padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.2);
+  font-size: 0.8125rem;
+  padding: 0.5rem 1.25rem;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(4px);
   border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .photo-card__content {
-  padding: 1rem;
+  padding: 0.875rem 1rem;
 }
 
 .photo-card__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.375rem;
 }
 
 .photo-card__author {
   font-weight: 600;
   color: #374151;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .photo-card__date {
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-size: 0.6875rem;
+  color: #c0c5ce;
+  letter-spacing: 0.01em;
 }
 
 .photo-card__caption {
-  font-size: 0.875rem;
-  color: #4b5563;
-  margin: 0 0 0.75rem 0;
-  line-height: 1.4;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin: 0 0 0.625rem 0;
+  line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -162,28 +172,30 @@ const formatDate = (dateStr?: string): string => {
 
 .photo-card__actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  margin: 0 -0.375rem;
 }
 
 .photo-card__comment-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.3rem;
+  padding: 0.375rem 0.625rem;
   border: none;
   background: transparent;
   border-radius: 9999px;
   cursor: pointer;
-  font-size: 0.875rem;
-  color: #6b7280;
-  transition: background 0.2s;
+  font-size: 0.8125rem;
+  color: #9ca3af;
+  transition: all 0.2s ease;
 }
 
 .photo-card__comment-btn:hover {
-  background: #f3f4f6;
+  background: #f9fafb;
+  color: #6b7280;
 }
 
 .photo-card__comment-btn span:first-child {
-  font-size: 1.125rem;
+  font-size: 1rem;
 }
 </style>
